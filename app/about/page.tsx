@@ -74,16 +74,21 @@ export default function AboutPage() {
         </div>
         <div>
           <p className="eyebrow">Your dentist</p>
-          <h2 className="mt-2 font-display text-3xl font-semibold text-ink sm:text-4xl">{site.dentistName}</h2>
+          <h2 className="mt-2 font-display text-3xl font-semibold text-ink sm:text-4xl">About Dr. Chad Gardner</h2>
           <p className="mt-4 text-ink-muted">
-            Dr. Gardner has built his career around two things: doing exceptional dentistry and making sure
-            every patient feels respected and cared for. He's known locally for taking the time to explain every
-            option, for being especially gentle with anxious patients, and for the long-term relationships he's
-            built with families across the parish.
+            Dr. Chad Gardner has practiced general dentistry since 2005 and serves patients in Bastrop,
+            Louisiana and the surrounding communities. His office focuses on practical, patient-centered
+            dental care with an emphasis on clear communication, modern technology, and treatment plans that
+            make sense for each patient's needs.
+          </p>
+          <p className="mt-4 text-ink-muted">
+            At {site.practiceName} — {site.seoName}, patients can receive routine family dentistry, emergency
+            care, whitening, dentures, implant-related dentistry, cosmetic options such as veneers, clear
+            aligners, and sedation options for patients who feel anxious about dental treatment.
           </p>
           <p className="mt-4 text-ink-muted">
             Outside the office, Dr. Gardner and his wife Carey are proud members of the Bastrop community —
-            you'll often catch them at local events, supporting area schools, or grabbing dinner with patients
+            you'll often find them at local events, supporting area schools, or having dinner with patients
             they've known for years.
           </p>
         </div>

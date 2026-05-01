@@ -3,6 +3,7 @@ import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
+import { MobileBottomCTA } from "@/components/MobileBottomCTA";
 import { site } from "@/lib/site";
 import "./globals.css";
 
@@ -12,14 +13,14 @@ const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakart
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: `${site.practiceName} — Dentist in Bastrop, LA`,
+    default: `Dentist in Bastrop, LA | ${site.practiceName} | ${site.seoName}`,
     template: `%s | ${site.practiceName}`,
   },
   description: site.description,
   openGraph: {
     type: "website",
     siteName: site.practiceName,
-    title: `${site.practiceName} — Dentist in Bastrop, LA`,
+    title: `Dentist in Bastrop, LA | ${site.practiceName} | ${site.seoName}`,
     description: site.description,
     images: ["/og/default.png"],
   },
@@ -40,8 +41,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to main content
         </a>
         <Header />
-        <main id="main">{children}</main>
+        <main id="main" className="pb-20 md:pb-0">{children}</main>
         <Footer />
+        <MobileBottomCTA />
         <JsonLd />
       </body>
     </html>

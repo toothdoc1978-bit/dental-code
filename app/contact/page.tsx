@@ -54,13 +54,18 @@ export default function ContactPage() {
           </div>
 
           <div className="card">
-            <h2 className="font-display text-xl font-semibold text-ink">Email</h2>
+            <h2 className="font-display text-xl font-semibold text-ink">Email & Fax</h2>
             <a
               href={`mailto:${site.email}`}
               className="mt-3 block text-sm font-semibold text-brand-700 hover:text-brand-600"
             >
               {site.email}
             </a>
+            <p className="mt-2 text-sm text-ink-muted">Fax: {site.fax}</p>
+            <p className="mt-3 rounded-xl bg-brand-50 px-3 py-2 text-xs text-ink-muted">
+              For your privacy, please don't include detailed medical information in our general contact
+              form. Use our secure patient forms or call the office.
+            </p>
           </div>
 
           <div className="card">

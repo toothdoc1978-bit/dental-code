@@ -5,9 +5,11 @@ export function JsonLd() {
     "@context": "https://schema.org",
     "@type": "Dentist",
     name: site.practiceName,
+    alternateName: [site.seoName, site.legacyName],
     description: site.description,
     url: site.url,
     telephone: site.phone.tel,
+    faxNumber: `+1-${site.fax}`,
     email: site.email,
     image: `${site.url}/og/default.png`,
     address: {

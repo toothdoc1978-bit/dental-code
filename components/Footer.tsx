@@ -6,13 +6,12 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-24 border-t border-brand-50 bg-brand-900 text-brand-50">
+    <footer className="mt-24 border-t border-brand-50 bg-brand-900 pb-24 text-brand-50 md:pb-0">
       <div className="container-page grid gap-10 py-14 md:grid-cols-4">
         <div className="md:col-span-2">
           <p className="font-display text-2xl font-semibold text-white">{site.practiceName}</p>
-          <p className="mt-3 max-w-md text-sm text-brand-100">
-            {site.description}
-          </p>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-200">{site.seoName}</p>
+          <p className="mt-4 max-w-md text-sm text-brand-100">{site.description}</p>
           <p className="mt-6 text-sm text-brand-100">
             <span className="block font-semibold text-white">Visit us</span>
             {fullAddress}
@@ -20,6 +19,10 @@ export function Footer() {
           <p className="mt-3 text-sm text-brand-100">
             <span className="block font-semibold text-white">Call</span>
             <PhoneLink className="hover:text-white" />
+          </p>
+          <p className="mt-3 text-sm text-brand-100">
+            <span className="block font-semibold text-white">Fax</span>
+            {site.fax}
           </p>
           <p className="mt-3 text-sm text-brand-100">
             <span className="block font-semibold text-white">Email</span>
@@ -39,6 +42,16 @@ export function Footer() {
                 </Link>
               </li>
             ))}
+            <li>
+              <Link href="/pricing" className="text-brand-100 hover:text-white">
+                Pricing
+              </Link>
+            </li>
+            <li>
+              <Link href="/privacy-policy" className="text-brand-100 hover:text-white">
+                Privacy Policy
+              </Link>
+            </li>
           </ul>
         </div>
 
@@ -58,7 +71,7 @@ export function Footer() {
       </div>
       <div className="border-t border-brand-800/60">
         <div className="container-page flex flex-col items-start justify-between gap-3 py-5 text-xs text-brand-200 sm:flex-row sm:items-center">
-          <p>© {year} {site.practiceName}. All rights reserved.</p>
+          <p>© {year} {site.practiceName} ({site.seoName}). All rights reserved.</p>
           <p>Designed for healthier smiles in Bastrop, Louisiana.</p>
         </div>
       </div>

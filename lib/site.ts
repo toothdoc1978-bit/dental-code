@@ -1,10 +1,12 @@
 export const site = {
   practiceName: "Chad Gardner, DDS",
-  dentistName: "Chad Gardner, DDS",
-  tagline: "Bright, healthy smiles for Bastrop — designed and delivered in days, not months.",
+  seoName: "Bastrop Dental Care",
+  legacyName: "Bastrop Family Dental Care",
+  dentistName: "Dr. Chad Gardner, DDS",
+  tagline: "Family Dentistry in Bastrop, Louisiana",
   description:
-    "Family, cosmetic, restorative, and implant dentistry in Bastrop, Louisiana. Home of natural-looking dentures and same-day full-mouth restorations powered by our in-office 5-axis zirconia mill and CEREC technology.",
-  url: "https://chadgardnerdds.com",
+    "Chad Gardner, DDS provides practical, modern dental care for families in Bastrop and the surrounding area — from emergency visits and routine care to dentures, whitening, implants, cosmetic dentistry, clear aligners, and sedation options.",
+  url: "https://gardnerdds.com",
   address: {
     line1: "625 S. Washington St.",
     city: "Bastrop",
@@ -13,16 +15,17 @@ export const site = {
     country: "US",
   },
   phone: {
-    display: "(318) 281-5972",
+    display: "318-281-5972",
     tel: "+13182815972",
   },
-  email: "info@chadgardnerdds.com",
+  fax: "318-281-9964",
+  email: "gardnerdental@yahoo.com",
   hours: [
-    { day: "Monday", open: "8:00 AM", close: "5:00 PM" },
-    { day: "Tuesday", open: "8:00 AM", close: "5:00 PM" },
-    { day: "Wednesday", open: "8:00 AM", close: "5:00 PM" },
-    { day: "Thursday", open: "8:00 AM", close: "5:00 PM" },
-    { day: "Friday", open: "By appointment", close: "" },
+    { day: "Monday", open: "8:00 AM", close: "4:00 PM" },
+    { day: "Tuesday", open: "8:00 AM", close: "4:00 PM" },
+    { day: "Wednesday", open: "8:00 AM", close: "4:00 PM" },
+    { day: "Thursday", open: "8:00 AM", close: "4:00 PM" },
+    { day: "Friday", open: "Closed", close: "" },
     { day: "Saturday", open: "Closed", close: "" },
     { day: "Sunday", open: "Closed", close: "" },
   ],
@@ -53,23 +56,30 @@ export const site = {
     "Low-radiation digital X-rays",
   ],
   insurance: [
-    "Delta Dental",
-    "BlueCross BlueShield",
-    "Cigna",
-    "MetLife",
-    "United Concordia",
-    "Aetna",
+    "Most traditional dental insurance plans",
+    "Medicaid for eligible patients under 21",
+    "Financing options for qualifying treatment",
   ],
   social: {
     google: "",
     facebook: "",
     instagram: "",
   },
+  links: {
+    // TODO: replace with verified Jotform HIPAA-compliant URL before launch
+    onlineForms: "TODO_VERIFY_JOTFORM_URL",
+    // TODO: replace with combined PDF packet hosted at /forms/new-patient-packet.pdf
+    printableFormsPacket: "/forms/new-patient-packet.pdf",
+    directions:
+      "https://www.google.com/maps/search/?api=1&query=625%20S%20Washington%20St%20Bastrop%20LA%2071220",
+  },
   nav: [
     { label: "Home", href: "/" },
     { label: "About", href: "/about" },
     { label: "Services", href: "/services" },
     { label: "Smile Gallery", href: "/smile-gallery" },
+    { label: "Patient Info", href: "/patient-forms" },
+    { label: "Post-Op", href: "/post-op-instructions" },
     { label: "Reviews", href: "/reviews" },
     { label: "Contact", href: "/contact" },
   ],

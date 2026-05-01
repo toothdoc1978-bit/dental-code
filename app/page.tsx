@@ -13,34 +13,52 @@ import { testimonials } from "@/lib/testimonials";
 export default function HomePage() {
   const galleryTeasers = galleryCases.slice(0, 3);
   const homeTestimonials = testimonials.slice(0, 3);
+  const formsLink = site.links.onlineForms;
+  const formsReady = formsLink && !formsLink.startsWith("TODO");
 
   return (
     <>
       <section className="relative overflow-hidden bg-gradient-to-b from-brand-50 to-white">
         <div className="container-page grid items-center gap-12 py-16 md:grid-cols-[1.1fr_1fr] md:py-24">
           <div>
-            <p className="eyebrow">Bastrop, Louisiana</p>
+            <p className="eyebrow">{site.seoName} · Bastrop, LA</p>
             <h1 className="mt-3 font-display text-4xl font-semibold leading-tight text-ink sm:text-5xl">
               {site.tagline}
             </h1>
             <p className="mt-5 max-w-xl text-lg text-ink-muted">
-              From routine cleanings to complete smile makeovers, {site.dentistName.split(",")[0]} and our team
-              deliver gentle, modern dentistry for the whole family.
+              {site.practiceName} provides practical, modern dental care for patients and families in Bastrop
+              and the surrounding area — from emergency visits and routine care to dentures, whitening,
+              implants, cosmetic dentistry, clear aligners, and sedation options.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/contact" className="btn-primary">
-                Request appointment
+              <PhoneLink className="btn-primary">Call {site.phone.display}</PhoneLink>
+              <Link href="/patient-forms" className="btn-secondary">
+                New patient forms
               </Link>
-              <PhoneLink className="btn-secondary" />
+              <a href={site.links.directions} target="_blank" rel="noreferrer" className="btn-secondary">
+                Get directions
+              </a>
             </div>
             <ul className="mt-10 grid grid-cols-2 gap-3 text-sm text-ink-muted sm:grid-cols-3">
               <li className="flex items-center gap-2">
                 <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full bg-brand-50 text-brand-700">✓</span>
-                Accepting new patients
+                625 S. Washington St
+              </li>
+              <li className="flex items-center gap-2">
+                <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full bg-brand-50 text-brand-700">✓</span>
+                Mon–Thu appointments
               </li>
               <li className="flex items-center gap-2">
                 <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full bg-brand-50 text-brand-700">✓</span>
                 Most insurance accepted
+              </li>
+              <li className="flex items-center gap-2">
+                <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full bg-brand-50 text-brand-700">✓</span>
+                Medicaid under 21
+              </li>
+              <li className="flex items-center gap-2">
+                <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full bg-brand-50 text-brand-700">✓</span>
+                Online & printable forms
               </li>
               <li className="flex items-center gap-2">
                 <span aria-hidden className="grid h-6 w-6 place-items-center rounded-full bg-brand-50 text-brand-700">✓</span>
@@ -99,8 +117,8 @@ export default function HomePage() {
               single tightly-coordinated week. It's a workflow most practices can't offer because they don't
               own the equipment. We do.
             </p>
-            <Link href="/services/restorative" className="mt-6 inline-flex text-sm font-semibold text-white hover:text-brand-100">
-              See how rapid full-mouth restoration works →
+            <Link href="/services/dentures" className="mt-6 inline-flex text-sm font-semibold text-white hover:text-brand-100">
+              See how rapid restoration works →
             </Link>
           </div>
           <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -129,7 +147,7 @@ export default function HomePage() {
                 <span className="font-semibold text-ink"> 48 hours</span> if you ever need one.
               </p>
               <Link
-                href="/services/restorative"
+                href="/services/dentures"
                 className="mt-6 inline-flex text-sm font-semibold text-brand-700 hover:text-brand-600"
               >
                 Learn how it works →
@@ -193,6 +211,46 @@ export default function HomePage() {
       </section>
 
       <section className="bg-surface-muted py-20">
+        <div className="container-page grid gap-10 md:grid-cols-[1.1fr_1fr] md:items-center">
+          <div>
+            <p className="eyebrow">Save time before your visit</p>
+            <h2 className="mt-2 font-display text-3xl font-semibold text-ink sm:text-4xl">
+              Patient forms — secure & online.
+            </h2>
+            <p className="mt-3 max-w-xl text-ink-muted">
+              Complete your health history, dental history, insurance information, and consent forms online
+              before your appointment. Printable versions are also available if you prefer to complete them by
+              hand.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              {formsReady ? (
+                <a href={formsLink} target="_blank" rel="noreferrer" className="btn-primary">
+                  Fill out forms online
+                </a>
+              ) : (
+                <Link href="/patient-forms" className="btn-primary">
+                  See patient forms
+                </Link>
+              )}
+              <a href={site.links.printableFormsPacket} className="btn-secondary">
+                Download printable packet
+              </a>
+            </div>
+          </div>
+          <div className="card">
+            <h3 className="font-display text-lg font-semibold text-ink">What to bring</h3>
+            <ul className="mt-4 space-y-2 text-sm text-ink">
+              <li className="flex items-start gap-3"><span aria-hidden className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-brand-500" />Photo ID</li>
+              <li className="flex items-start gap-3"><span aria-hidden className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-brand-500" />Dental insurance card (if applicable)</li>
+              <li className="flex items-start gap-3"><span aria-hidden className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-brand-500" />List of current medications</li>
+              <li className="flex items-start gap-3"><span aria-hidden className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-brand-500" />Recent dental records or X-rays, if available</li>
+              <li className="flex items-start gap-3"><span aria-hidden className="mt-1.5 h-1.5 w-1.5 flex-none rounded-full bg-brand-500" />Any specific concerns to discuss</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-surface-muted py-20">
         <div className="container-page">
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
@@ -230,15 +288,15 @@ export default function HomePage() {
           <div>
             <p className="eyebrow">About</p>
             <h2 className="mt-2 font-display text-3xl font-semibold text-ink sm:text-4xl">
-              Meet {site.dentistName.split(",")[0]}
+              Meet Dr. Chad Gardner
             </h2>
             <p className="mt-4 text-ink-muted">
-              Our practice was built on a simple promise — treat every patient like family, and never recommend
-              anything we wouldn't do for our own. From your first cleaning to a complete smile redesign, you'll
-              be cared for by a team that listens, explains, and takes the time to get it right.
+              Practicing general dentistry since 2005, Dr. Gardner serves families in Bastrop and the
+              surrounding parish with a focus on practical, patient-centered care, clear communication, and
+              modern technology.
             </p>
             <p className="mt-4 text-ink-muted">
-              Dr. Gardner and his wife Carey have called Bastrop home for years, and they love serving their
+              Dr. Gardner and his wife Carey have called Bastrop home for years and love serving their
               neighbors across Morehouse Parish.
             </p>
             <Link href="/about" className="mt-6 inline-flex text-sm font-semibold text-brand-700 hover:text-brand-600">

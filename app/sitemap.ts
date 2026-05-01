@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { postOps } from "@/lib/post-op";
 import { services } from "@/lib/services";
 import { site } from "@/lib/site";
 
@@ -10,8 +11,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/about",
     "/services",
     "/smile-gallery",
+    "/patient-forms",
+    "/post-op-instructions",
+    "/pricing",
+    "/blog",
     "/reviews",
     "/contact",
+    "/privacy-policy",
+    "/accessibility",
   ].map((path) => ({
     url: `${base}${path}`,
     lastModified: now,
@@ -24,5 +31,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: "monthly",
     priority: 0.8,
   }));
-  return [...staticRoutes, ...serviceRoutes];
+  const postOpRoutes: MetadataRoute.Sitemap = postOps.map((p) => ({
+    url: `${base}/post-op-instructions/${p.slug}`,
+    lastModified: now,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+  return [...staticRoutes, ...serviceRoutes, ...postOpRoutes];
 }

@@ -13,12 +13,15 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-brand-50 bg-white/90 backdrop-blur">
       <div className="container-page flex h-16 items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2 font-display text-lg font-bold text-brand-700">
+        <Link href="/" className="flex items-center gap-3 font-display font-bold text-brand-700">
           <span aria-hidden className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-white">CG</span>
-          <span className="hidden sm:inline">{site.practiceName}</span>
+          <span className="hidden flex-col leading-tight sm:flex">
+            <span className="text-base">{site.practiceName}</span>
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brand-500">{site.seoName}</span>
+          </span>
         </Link>
 
-        <nav className="hidden items-center gap-6 lg:flex" aria-label="Primary">
+        <nav className="hidden items-center gap-5 lg:flex" aria-label="Primary">
           {site.nav.map((item) => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
