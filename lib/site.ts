@@ -62,10 +62,12 @@ export const site = {
   ],
   social: {
     google: "https://maps.app.goo.gl/ZwZuedBxvSmN8GtbA?g_st=ic",
-    facebook: "",
-    instagram: "",
+    facebook: "https://www.facebook.com/share/1GTUHZuqKg/?mibextid=wwXIfr",
+    instagram: "https://www.instagram.com/chadgardnerdds",
+    youtube: "https://www.youtube.com/@chadgardnerdds3197",
   },
   googleBusinessProfileId: "1081-9402-5847-2900-9804",
+  alternateDomains: ["bastropdentalclinic.com", "drchadgardner.com"],
   links: {
     // TODO: replace with verified Jotform HIPAA-compliant URL before launch
     onlineForms: "TODO_VERIFY_JOTFORM_URL",

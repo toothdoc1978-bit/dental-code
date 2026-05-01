@@ -31,7 +31,12 @@ export function JsonLd() {
       })),
     priceRange: "$$",
     "@id": site.url,
-    sameAs: [site.social.google, site.social.facebook, site.social.instagram].filter(Boolean),
+    sameAs: [
+      site.social.google,
+      site.social.facebook,
+      site.social.instagram,
+      site.social.youtube,
+    ].filter(Boolean),
   };
 
   return (
