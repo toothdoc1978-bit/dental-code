@@ -116,7 +116,7 @@ export const services: Service[] = [
         a: "Premium dentures start at $1,500 per arch. Final cost depends on materials, the complexity of the case, and any preliminary treatment that may be needed. We'll give you a clear estimate after the exam.",
       },
     ],
-    relatedGallery: ["case-01-full-mouth", "case-03-full-arch"],
+    relatedGallery: ["case-01-full-mouth", "case-03-full-arch", "case-08-zirconia-restoration"],
   },
   {
     slug: "dental-implants",
@@ -253,7 +253,14 @@ export const services: Service[] = [
         a: "With good home care and regular cleanings, porcelain veneers commonly last 10–15+ years.",
       },
     ],
-    relatedGallery: ["case-02-veneers", "case-04-smile-makeover"],
+    relatedGallery: [
+      "case-02-veneers",
+      "case-04-smile-makeover",
+      "case-05-anterior-bonding",
+      "case-06-veneer-transformation",
+      "case-07-pediatric-bonding",
+      "case-08-zirconia-restoration",
+    ],
   },
   {
     slug: "clear-aligners",
