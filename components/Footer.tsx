@@ -67,6 +67,16 @@ export function Footer() {
           </ul>
           <p className="mt-6 font-display text-sm font-semibold uppercase tracking-wider text-white">Areas We Serve</p>
           <p className="mt-3 text-sm text-brand-100">{site.serviceArea.join(" · ")}</p>
+          {site.social.google && (
+            <a
+              href={site.social.google}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-brand-100 hover:text-white"
+            >
+              <span aria-hidden>★</span> Find us on Google
+            </a>
+          )}
         </div>
       </div>
       <div className="border-t border-brand-800/60">

@@ -61,10 +61,11 @@ export const site = {
     "Financing options for qualifying treatment",
   ],
   social: {
-    google: "",
+    google: "https://maps.app.goo.gl/ZwZuedBxvSmN8GtbA?g_st=ic",
     facebook: "",
     instagram: "",
   },
+  googleBusinessProfileId: "1081-9402-5847-2900-9804",
   links: {
     // TODO: replace with verified Jotform HIPAA-compliant URL before launch
     onlineForms: "TODO_VERIFY_JOTFORM_URL",
