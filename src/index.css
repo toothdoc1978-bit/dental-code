@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium transition-colors;
+    min-height: 44px;
+  }
+  .btn-primary {
+    @apply btn bg-clinical-600 text-white hover:bg-clinical-700;
+  }
+  .btn-secondary {
+    @apply btn bg-white border border-slate-300 text-slate-700 hover:bg-slate-50;
+  }
+  .btn-tile {
+    @apply px-4 py-3 rounded-md border-2 font-medium transition-all text-left;
+    min-height: 44px;
+  }
+  .btn-tile-inactive {
+    @apply btn-tile bg-white border-slate-200 hover:border-slate-300 text-slate-700;
+  }
+  .btn-tile-active {
+    @apply btn-tile bg-clinical-50 border-clinical-600 text-clinical-700 ring-2 ring-clinical-200;
+  }
+  .check-chip {
+    @apply flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-colors;
+    min-height: 44px;
+  }
+  .check-chip-off {
+    @apply check-chip bg-white border-slate-200 hover:bg-slate-50 text-slate-700;
+  }
+  .check-chip-on {
+    @apply check-chip bg-clinical-50 border-clinical-500 text-clinical-700;
+  }
+  .section-title {
+    @apply text-base font-semibold text-slate-800 mb-3 mt-4;
+  }
+  .input {
+    @apply rounded-md border-slate-300 focus:ring-clinical-500 focus:border-clinical-500;
+  }
+}
