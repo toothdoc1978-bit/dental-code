@@ -157,6 +157,21 @@ export const EPSDT_REFERRALS = [
   'Early intervention services'
 ]
 
+export const EDUCATION_TOPICS_EPSDT = [
+  'Toothbrushing technique (caregiver-assisted if young)',
+  'Fluoride toothpaste — pea-sized amount',
+  'Fluoride varnish benefits',
+  'Bottle/sippy cup weaning',
+  'Sugar-sweetened beverage reduction',
+  'Snacking frequency',
+  'Sealant recommendation',
+  'Pacifier/digit habit cessation',
+  'Teething/eruption timeline',
+  'Early childhood caries prevention',
+  'Importance of regular dental visits',
+  'Mouthguard for sports'
+]
+
 export const EDUCATION_TOPICS = [
   'Toothbrushing technique',
   'Flossing/interdental cleaning',

@@ -7,8 +7,76 @@ const PERMANENT_LOWER = Array.from({ length: 16 }, (_, i) => String(32 - i))
 const PRIMARY_UPPER = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
 const PRIMARY_LOWER = ['T', 'S', 'R', 'Q', 'P', 'O', 'N', 'M', 'L', 'K']
 
+const SURFACE_FILL = {
+  Caries: '#dc2626',
+  'Existing amalgam': '#475569',
+  'Existing composite': '#fef3c7',
+  'Sealant present': '#67e8f9'
+}
+
+const SURFACE_PRIORITY = ['Caries', 'Existing amalgam', 'Existing composite', 'Sealant present']
+
+function pickSurfaceColor(conditions) {
+  for (const c of SURFACE_PRIORITY) if (conditions.includes(c)) return SURFACE_FILL[c]
+  return null
+}
+
+function ToothGlyph({ tooth, isSelected }) {
+  const conditions = tooth.conditions || []
+  const surfaces = tooth.surfaces || []
+  const missing = conditions.includes('Missing')
+  const crown = conditions.includes('Crown')
+  const implant = conditions.includes('Implant')
+  const rct = conditions.includes('Root canal treated')
+  const pa = conditions.includes('Periapical pathology')
+  const watch = conditions.includes('Watch/monitor')
+  const fracture = conditions.includes('Fracture')
+  const mobility = conditions.includes('Mobility')
+
+  const surfaceColor = pickSurfaceColor(conditions)
+  const fillSurface = (s) => {
+    if (crown) return '#fbbf24'
+    if (implant) return '#1f2937'
+    if (!surfaceColor) return '#ffffff'
+    if (surfaces.length === 0) return s === 'O/I' ? surfaceColor : '#ffffff'
+    return surfaces.includes(s) ? surfaceColor : '#ffffff'
+  }
+
+  // 40x40 viewbox: outer corners (0,0)-(40,40), inner occlusal (12,12)-(28,28)
+  const stroke = isSelected ? '#0369a1' : '#94a3b8'
+  const strokeWidth = isSelected ? 2 : 1
+  const dash = mobility ? '2,2' : undefined
+
+  return (
+    <svg viewBox="0 0 40 40" className="w-full h-full block">
+      {pa && <rect x="1" y="1" width="38" height="38" rx="4" fill="none" stroke="#dc2626" strokeWidth="2" />}
+      <g>
+        {/* B/F top trapezoid */}
+        <polygon points="0,0 40,0 28,12 12,12" fill={fillSurface('B/F')} stroke={stroke} strokeWidth={strokeWidth} strokeDasharray={dash} />
+        {/* D right */}
+        <polygon points="40,0 40,40 28,28 28,12" fill={fillSurface('D')} stroke={stroke} strokeWidth={strokeWidth} strokeDasharray={dash} />
+        {/* L/P bottom */}
+        <polygon points="0,40 40,40 28,28 12,28" fill={fillSurface('L/P')} stroke={stroke} strokeWidth={strokeWidth} strokeDasharray={dash} />
+        {/* M left */}
+        <polygon points="0,0 0,40 12,28 12,12" fill={fillSurface('M')} stroke={stroke} strokeWidth={strokeWidth} strokeDasharray={dash} />
+        {/* O/I center */}
+        <polygon points="12,12 28,12 28,28 12,28" fill={fillSurface('O/I')} stroke={stroke} strokeWidth={strokeWidth} strokeDasharray={dash} />
+      </g>
+      {missing && (
+        <g stroke="#64748b" strokeWidth="3" strokeLinecap="round">
+          <line x1="6" y1="6" x2="34" y2="34" />
+          <line x1="34" y1="6" x2="6" y2="34" />
+        </g>
+      )}
+      {rct && !missing && <circle cx="20" cy="20" r="3" fill="#a855f7" />}
+      {fracture && !missing && <line x1="4" y1="36" x2="36" y2="4" stroke="#dc2626" strokeWidth="2" />}
+      {watch && !missing && <circle cx="34" cy="6" r="3" fill="#f59e0b" />}
+    </svg>
+  )
+}
+
 export default function ToothChart({ store }) {
-  const { state, setField, toggleItem } = store
+  const { state, setField } = store
   const [selectedTooth, setSelectedTooth] = useState(null)
   const dentition = state.dentitionType
   const upper = dentition === 'primary' ? PRIMARY_UPPER : PERMANENT_UPPER
@@ -32,22 +100,23 @@ export default function ToothChart({ store }) {
 
   const renderTooth = (n) => {
     const t = getToothState(n)
-    const hasFindings = t.conditions.length > 0
     const isSelected = selectedTooth === n
+    const tooltip = t.conditions.length
+      ? `#${n}: ${t.conditions.join(', ')}${t.surfaces.length ? ` (${t.surfaces.join('')})` : ''}`
+      : `#${n}: WNL`
     return (
       <button
         key={n}
         onClick={() => setSelectedTooth(n)}
-        className={`w-10 h-12 rounded text-xs font-mono font-bold border-2 transition-all ${
-          isSelected
-            ? 'bg-clinical-600 text-white border-clinical-700 scale-110'
-            : hasFindings
-            ? 'bg-amber-100 border-amber-500 text-amber-900'
-            : 'bg-white border-slate-300 hover:border-clinical-400'
+        title={tooltip}
+        className={`flex flex-col items-center gap-0.5 p-0.5 rounded transition-all ${
+          isSelected ? 'bg-clinical-100 ring-2 ring-clinical-500' : 'hover:bg-slate-100'
         }`}
-        title={hasFindings ? t.conditions.join(', ') : 'WNL'}
       >
-        {n}
+        <div className="w-9 h-9">
+          <ToothGlyph tooth={t} isSelected={isSelected} />
+        </div>
+        <span className="text-[10px] font-mono font-bold text-slate-600 leading-none">{n}</span>
       </button>
     )
   }
@@ -68,12 +137,24 @@ export default function ToothChart({ store }) {
         </div>
       </Section>
 
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-3 text-xs text-slate-600">
+        <span className="font-medium text-slate-500">Legend:</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: '#dc2626' }} /> Caries</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: '#475569' }} /> Amalgam</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm border border-slate-300" style={{ background: '#fef3c7' }} /> Composite</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: '#fbbf24' }} /> Crown</span>
+        <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ background: '#67e8f9' }} /> Sealant</span>
+        <span>✕ Missing</span>
+        <span className="text-purple-600">● RCT</span>
+        <span className="text-amber-600">● Watch</span>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 bg-white border border-slate-200 rounded-md p-4">
           <div className="text-xs text-slate-500 mb-2">Maxillary (Upper)</div>
-          <div className="flex gap-1 flex-wrap mb-4">{upper.map(renderTooth)}</div>
+          <div className="flex gap-0.5 flex-wrap mb-4">{upper.map(renderTooth)}</div>
           <div className="text-xs text-slate-500 mb-2">Mandibular (Lower)</div>
-          <div className="flex gap-1 flex-wrap">{lower.map(renderTooth)}</div>
+          <div className="flex gap-0.5 flex-wrap">{lower.map(renderTooth)}</div>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-md p-4 sticky top-32 h-fit">
