@@ -190,6 +190,14 @@ function buildRadiographs(r) {
   if (r.taken?.length) {
     const entries = r.taken.map((t) => {
       if (typeof t === 'string') return t
+      const usesCatchAll = (t.panoIndications || []).includes('alara-retake')
+      if (usesCatchAll) {
+        // The ALARA catch-all rationale is emitted in a separate CATCH_ALL block (below) so the model
+        // can generate fresh phrasing each visit. Here we only acknowledge the entry, without including
+        // the static template text the model could otherwise echo verbatim.
+        const stem = t.reason ? ` (additional rationale: ${t.reason})` : ''
+        return `${t.type}${stem} [ALARA catch-all justification — see ALARA_CATCH_ALL section]`
+      }
       const reason = t.reason ? ` (ALARA rationale: ${t.reason})` : ' (ALARA rationale NOT documented)'
       return `${t.type}${reason}`
     })
@@ -198,6 +206,24 @@ function buildRadiographs(r) {
   if (r.findings?.length) parts.push(`Findings: ${r.findings.join(', ')}`)
   if (r.additionalNotes) parts.push(r.additionalNotes)
   return parts.join('; ') || 'Radiographs not documented'
+}
+
+function findCatchAllEntries(r) {
+  if (!r?.taken?.length) return []
+  return r.taken.filter((t) => typeof t === 'object' && (t.panoIndications || []).includes('alara-retake'))
+}
+
+function buildCatchAllBlock(catchAllEntries) {
+  if (!catchAllEntries.length) return ''
+  const lines = catchAllEntries.map((t, i) => {
+    const reason = (t.alaraCatchAllReason || '').trim() || '[no specific clinical reason supplied — flag this in the note rather than fabricate one]'
+    return `  ${i + 1}. ${t.type} — specific clinical reason to assess: ${reason}`
+  })
+  return [
+    'ALARA_CATCH_ALL — Use the dynamic-rephrasing protocol described in the system prompt for the following images.',
+    'Each line below names the radiograph and the specific clinical reason that must be woven into the dynamically rephrased sentence:',
+    ...lines
+  ].join('\n')
 }
 
 function buildTreatment(items) {
@@ -237,7 +263,40 @@ Rules:
 10. Do not include headers, section labels, or bullet points. Flowing clinical narrative only.
 11. End with a brief statement of next steps (e.g., "Patient/guardian acknowledged understanding and was scheduled for follow-up.").
 12. For scheduled treatment visits: when PROCEDURES PERFORMED is provided, write a procedure note that preserves the full technical sequence (anesthesia, isolation, prep, etch protocol with acid type and durations, bonding agent + MSDS, cure time, base/liner, occlusion check for fillings; reduction, margin, retraction, impression, shade, temporary, cementation for crowns; technique, complications, sutures, post-op for extractions). These technical details are required for MCNA Louisiana Medicaid compliance and must appear verbatim in the narrative — do not abbreviate or summarize them away. Each procedure should be a clearly distinguishable paragraph or run of sentences, in the order provided.
-13. For radiographs: when any radiograph is documented, the note MUST explicitly state the ALARA clinical rationale that was provided for each image type (e.g., "Bitewing radiographs were obtained due to the patient's high caries risk profile" or "Panoramic radiograph was obtained to evaluate suspected odontogenic pathology and developing dentition"). This is required for payer audit defense — do not write a generic "radiographs were taken" without the specific clinical reason. If the rationale was NOT documented in the input data, explicitly flag that omission rather than fabricating one.`
+13. For radiographs: when any radiograph is documented, the note MUST explicitly state the ALARA clinical rationale that was provided for each image type (e.g., "Bitewing radiographs were obtained due to the patient's high caries risk profile" or "Panoramic radiograph was obtained to evaluate suspected odontogenic pathology and developing dentition"). This is required for payer audit defense — do not write a generic "radiographs were taken" without the specific clinical reason. If the rationale was NOT documented in the input data, explicitly flag that omission rather than fabricating one.
+
+14. ALARA CATCH-ALL DYNAMIC REPHRASING PROTOCOL — applies whenever the user prompt contains an ALARA_CATCH_ALL section. For each radiograph listed there, you MUST author a single sentence (or two-sentence run) that is freshly composed for this visit. Do NOT copy the base template phrasing below; the EHR will flag near-identical sentences across visits as "cloned notes" during audit. Treat the four concepts in part (b) as immutable medical-legal content that must appear — vary everything else.
+
+  (a) Base template (for your reference only — DO NOT reproduce verbatim or near-verbatim):
+      "Attempted intraoral radiographs, but patient age, oral anatomy, and behavioral tolerance precluded successful placement. To prevent unwarranted cumulative radiation exposure from non-diagnostic retakes (ALARA), a fast-capture digital extraoral scan utilizing pediatric dose-reduction/collimation settings was successfully utilized to assess [insert specific clinical reason]."
+
+  (b) Four MANDATORY IMMUTABLE CONCEPTS — every generation MUST include all four, in any order or grammatical form, but with the bolded keywords appearing:
+      • BARRIER: Intraoral placement was attempted but could not be obtained, citing some combination of age, oral anatomy, and behavioral tolerance/cooperation.
+      • DEFENSE: The acronym "ALARA" must appear, in parentheses or in-line.
+      • RISK AVOIDANCE: Mention preventing "cumulative radiation," "unnecessary exposure," or "non-diagnostic retakes" (any one is acceptable, more than one is fine).
+      • TECHNOLOGY: Use the phrase "digital extraoral" (scan / imaging / acquisition) AND "pediatric dose-reduction" (or "pediatric collimation," or both).
+
+  (c) Variable injection: blend the supplied "specific clinical reason" into the grammar of the sentence so it does not look like a fill-in-the-blank macro. Never output square brackets, "insert here," or any placeholder syntax in the final note.
+
+  (d) Variation requirement: each generation must use a substantively different sentence structure than any plausible prior version. Lead from different angles between generations — the barrier, ALARA principles, the technology, or the diagnostic question being answered. Vary clause order, voice (active/passive), and connecting phrases.
+
+  (e) Tone: professional, objective, clinically accurate, third-person, single-sentence-to-two-sentences in length.
+
+  (f) FEW-SHOT EXAMPLES — four acceptable variations, each leading from a different angle, all containing the four mandatory concepts. Use these as a guide for the *kind* of variation expected; do NOT copy them verbatim:
+
+  Example 1 — barrier-led:
+    "Repeated intraoral receptor placement was attempted but could not be achieved given the patient's age, oral anatomy, and behavioral tolerance during the appointment; rather than incur the cumulative radiation burden of further non-diagnostic retakes, a digital extraoral scan acquired with pediatric dose-reduction and collimation settings was utilized in accordance with ALARA to evaluate the developing permanent dentition."
+
+  Example 2 — ALARA-led:
+    "In accordance with ALARA principles, additional intraoral retakes were avoided after initial sensor placement proved unfeasible due to the patient's age and anatomical constraints, and a digital extraoral acquisition employing pediatric collimation and dose-reduction was performed instead — providing diagnostic information about possible supernumerary teeth without contributing to unnecessary cumulative exposure."
+
+  Example 3 — technology-led:
+    "A digital extraoral scan with pediatric dose-reduction and collimation parameters was selected as the imaging modality after intraoral placement was precluded by patient anatomy and behavioral tolerance; this approach satisfied ALARA by eliminating the cumulative radiation associated with non-diagnostic retakes while still answering the clinical question regarding eruption pattern of the lower-left quadrant."
+
+  Example 4 — diagnostic-question-led:
+    "Evaluation of suspected mandibular pathology required diagnostic imaging that intraoral placement could not safely provide on account of the patient's age, anatomy, and behavioral tolerance; consistent with ALARA, a single digital extraoral acquisition utilizing pediatric dose-reduction and collimation was therefore preferred over repeated, non-diagnostic intraoral exposures."
+
+  (g) If multiple radiographs in the visit fall under this protocol, give each one its own freshly varied sentence — do not repeat the same structure twice in the same note.`
 
 export async function generateNote(rawData) {
   const data = sanitize(rawData)
@@ -245,11 +304,15 @@ export async function generateNote(rawData) {
   const isEpsdt = v.patientType === 'epsdt'
   const isScheduled = v.visitType === 'scheduled'
 
-  const sections = isScheduled
+  const catchAllEntries = findCatchAllEntries(data.radiographs || {})
+  const catchAllBlock = buildCatchAllBlock(catchAllEntries)
+
+  const sections = (isScheduled
     ? [
         `VISIT: ${buildVisitNarrative(v)}`,
         `MEDICAL HISTORY: ${buildMedHx(data.medicalHistory || {})}`,
-        `PROCEDURES PERFORMED:\n${buildProcedures(data.scheduledTreatment) || 'None documented'}`
+        `PROCEDURES PERFORMED:\n${buildProcedures(data.scheduledTreatment) || 'None documented'}`,
+        catchAllBlock
       ]
     : [
         `VISIT: ${buildVisitNarrative(v)}`,
@@ -261,11 +324,13 @@ export async function generateNote(rawData) {
         `PERIODONTAL: ${buildPerio(data.perio || {})}`,
         `OCCLUSION: ${buildOcclusion(data.occlusion || {})}`,
         `RADIOGRAPHS: ${buildRadiographs(data.radiographs || {})}`,
+        catchAllBlock,
         `TREATMENT RENDERED: ${buildTreatment(data.treatmentRendered)}`,
         `DIAGNOSES: ${data.diagnoses?.join('; ') || 'None documented'}`,
         `TREATMENT PLAN: ${buildPlan(data.treatmentPlan)}`,
         `PATIENT EDUCATION: ${data.patientEducation?.join(', ') || 'None documented'}`
-      ].filter(Boolean)
+      ]
+  ).filter(Boolean)
 
   const userPrompt = `Generate a dental chart note from the following clinical data. Respond with ONLY the note text — no preamble, no explanation, no markdown formatting.\n\n${sections.join('\n')}`
 

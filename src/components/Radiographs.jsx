@@ -14,7 +14,12 @@ function isPano(type) {
 function buildPanoReason(indicationIds) {
   if (!indicationIds?.length) return ''
   const all = PEDIATRIC_PANO_INDICATIONS.flatMap((g) => g.items)
-  const docs = indicationIds.map((id) => all.find((x) => x.id === id)?.documentation).filter(Boolean)
+  // The ALARA catch-all is intentionally excluded from the auto-fill — its phrasing is
+  // generated dynamically server-side to avoid producing cloned-note text across visits.
+  const docs = indicationIds
+    .filter((id) => id !== 'alara-retake')
+    .map((id) => all.find((x) => x.id === id)?.documentation)
+    .filter(Boolean)
   if (!docs.length) return ''
   return `${docs.join(' ')} ${PEDIATRIC_PANO_ALARA_FOOTER}`
 }
@@ -36,6 +41,10 @@ export default function Radiographs({ store }) {
 
   const setReason = (type, value) => {
     setField('radiographs.taken', r.taken.map((t) => (t.type === type ? { ...t, reason: value } : t)))
+  }
+
+  const setCatchAllReason = (type, value) => {
+    setField('radiographs.taken', r.taken.map((t) => (t.type === type ? { ...t, alaraCatchAllReason: value } : t)))
   }
 
   const setQuickReason = (type, reason) => setReason(type, reason)
@@ -147,6 +156,23 @@ export default function Radiographs({ store }) {
                               </div>
                             </details>
                           ))}
+                          {(entry.panoIndications || []).includes('alara-retake') && (
+                            <div className="border border-amber-300 bg-amber-50 rounded p-3">
+                              <label className="block text-sm font-semibold text-amber-900 mb-1">
+                                ALARA catch-all: specific clinical reason being assessed
+                              </label>
+                              <p className="text-xs text-amber-800 mb-2">
+                                Be specific (e.g., "developing permanent dentition and root morphology of #J/K", "interproximal caries assessment"). The note generator will <strong>rephrase the ALARA catch-all language fresh every visit</strong> to avoid cloned-note audit flags, while preserving the medical-legal defenses (barrier, ALARA, cumulative-radiation avoidance, digital extraoral + pediatric collimation).
+                              </p>
+                              <input
+                                type="text"
+                                value={entry.alaraCatchAllReason || ''}
+                                onChange={(e) => setCatchAllReason(entry.type, e.target.value)}
+                                placeholder="e.g., evaluation of developing dentition prior to space maintenance"
+                                className="input w-full"
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
