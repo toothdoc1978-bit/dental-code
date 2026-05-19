@@ -187,7 +187,14 @@ function buildOcclusion(o) {
 function buildRadiographs(r) {
   if (r.none) return 'No radiographs taken today'
   const parts = []
-  if (r.taken?.length) parts.push(`Taken: ${r.taken.join(', ')}`)
+  if (r.taken?.length) {
+    const entries = r.taken.map((t) => {
+      if (typeof t === 'string') return t
+      const reason = t.reason ? ` (ALARA rationale: ${t.reason})` : ' (ALARA rationale NOT documented)'
+      return `${t.type}${reason}`
+    })
+    parts.push(`Taken: ${entries.join('; ')}`)
+  }
   if (r.findings?.length) parts.push(`Findings: ${r.findings.join(', ')}`)
   if (r.additionalNotes) parts.push(r.additionalNotes)
   return parts.join('; ') || 'Radiographs not documented'
@@ -229,7 +236,8 @@ Rules:
 9. Length: 200–400 words for comprehensive exams, 100–200 words for limited/emergency visits.
 10. Do not include headers, section labels, or bullet points. Flowing clinical narrative only.
 11. End with a brief statement of next steps (e.g., "Patient/guardian acknowledged understanding and was scheduled for follow-up.").
-12. For scheduled treatment visits: when PROCEDURES PERFORMED is provided, write a procedure note that preserves the full technical sequence (anesthesia, isolation, prep, etch protocol with acid type and durations, bonding agent + MSDS, cure time, base/liner, occlusion check for fillings; reduction, margin, retraction, impression, shade, temporary, cementation for crowns; technique, complications, sutures, post-op for extractions). These technical details are required for MCNA Louisiana Medicaid compliance and must appear verbatim in the narrative — do not abbreviate or summarize them away. Each procedure should be a clearly distinguishable paragraph or run of sentences, in the order provided.`
+12. For scheduled treatment visits: when PROCEDURES PERFORMED is provided, write a procedure note that preserves the full technical sequence (anesthesia, isolation, prep, etch protocol with acid type and durations, bonding agent + MSDS, cure time, base/liner, occlusion check for fillings; reduction, margin, retraction, impression, shade, temporary, cementation for crowns; technique, complications, sutures, post-op for extractions). These technical details are required for MCNA Louisiana Medicaid compliance and must appear verbatim in the narrative — do not abbreviate or summarize them away. Each procedure should be a clearly distinguishable paragraph or run of sentences, in the order provided.
+13. For radiographs: when any radiograph is documented, the note MUST explicitly state the ALARA clinical rationale that was provided for each image type (e.g., "Bitewing radiographs were obtained due to the patient's high caries risk profile" or "Panoramic radiograph was obtained to evaluate suspected odontogenic pathology and developing dentition"). This is required for payer audit defense — do not write a generic "radiographs were taken" without the specific clinical reason. If the rationale was NOT documented in the input data, explicitly flag that omission rather than fabricating one.`
 
 export async function generateNote(rawData) {
   const data = sanitize(rawData)

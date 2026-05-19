@@ -7,7 +7,8 @@ export const initialState = {
     patientType: null,
     visitType: null,
     visitDate: new Date().toISOString().slice(0, 10),
-    provider: null
+    provider: null,
+    age: null
   },
   scheduledTreatment: {
     procedures: []
@@ -132,6 +133,9 @@ export function useChartStore() {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) {
         const parsed = JSON.parse(raw)
+        if (parsed.radiographs?.taken?.length && typeof parsed.radiographs.taken[0] === 'string') {
+          parsed.radiographs.taken = parsed.radiographs.taken.map((t) => ({ type: t, reason: '', panoIndications: [] }))
+        }
         dispatch({ type: 'HYDRATE', state: { ...initialState, ...parsed } })
       }
     } catch {}

@@ -40,6 +40,18 @@ export default function VisitSetup({ store }) {
         />
       </Section>
 
+      <Section title="Patient Age" hint="Enables age-specific clinical logic (e.g., pediatric pano justification under 6). Age alone is not PHI under HIPAA Safe Harbor for patients under 90.">
+        <input
+          type="number"
+          min="0"
+          max="120"
+          value={v.age ?? ''}
+          onChange={(e) => setField('visitSetup.age', e.target.value === '' ? null : Number(e.target.value))}
+          placeholder="years"
+          className="input w-32"
+        />
+      </Section>
+
       {isScheduled && (
         <Section title="Provider" hint="Required for scheduled treatment visits.">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
