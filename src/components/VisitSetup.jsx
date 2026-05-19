@@ -1,9 +1,10 @@
 import { Tile, Section, PageTitle } from './shared.jsx'
-import { PATIENT_TYPES, VISIT_TYPES } from '../data/examDefaults.js'
+import { PATIENT_TYPES, VISIT_TYPES, PROVIDERS } from '../data/examDefaults.js'
 
 export default function VisitSetup({ store }) {
   const { state, setField } = store
   const v = state.visitSetup
+  const isScheduled = v.visitType === 'scheduled'
 
   return (
     <div>
@@ -38,6 +39,18 @@ export default function VisitSetup({ store }) {
           className="input w-48"
         />
       </Section>
+
+      {isScheduled && (
+        <Section title="Provider" hint="Required for scheduled treatment visits.">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {PROVIDERS.map((p) => (
+              <Tile key={p} active={v.provider === p} onClick={() => setField('visitSetup.provider', p)}>
+                {p}
+              </Tile>
+            ))}
+          </div>
+        </Section>
+      )}
 
       <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
         <strong>HIPAA reminder:</strong> This app never collects or stores patient names, DOB, or Medicaid ID.

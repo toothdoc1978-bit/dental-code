@@ -6,7 +6,11 @@ export const initialState = {
   visitSetup: {
     patientType: null,
     visitType: null,
-    visitDate: new Date().toISOString().slice(0, 10)
+    visitDate: new Date().toISOString().slice(0, 10),
+    provider: null
+  },
+  scheduledTreatment: {
+    procedures: []
   },
   medicalHistory: {
     changesSinceLastVisit: null,

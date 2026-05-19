@@ -16,7 +16,8 @@ const ALLOWED_KEYS = new Set([
   'treatmentRendered',
   'diagnoses',
   'treatmentPlan',
-  'patientEducation'
+  'patientEducation',
+  'scheduledTreatment'
 ])
 
 function sanitize(data) {
@@ -26,9 +27,78 @@ function sanitize(data) {
 }
 
 function buildVisitNarrative(v) {
-  const types = { comprehensive: 'comprehensive oral evaluation', periodic: 'periodic recall examination', limited: 'limited problem-focused evaluation', emergency: 'emergency visit' }
+  const types = {
+    comprehensive: 'comprehensive oral evaluation',
+    periodic: 'periodic recall examination',
+    limited: 'limited problem-focused evaluation',
+    emergency: 'emergency visit',
+    scheduled: 'scheduled treatment visit'
+  }
   const pts = { epsdt: 'pediatric EPSDT Medicaid patient', child: 'pediatric patient', adult: 'adult patient' }
-  return `${types[v.visitType] || 'dental visit'} for a ${pts[v.patientType] || 'patient'} on ${v.visitDate}`
+  const provider = v.provider ? ` with ${v.provider}` : ''
+  return `${types[v.visitType] || 'dental visit'} for a ${pts[v.patientType] || 'patient'}${provider} on ${v.visitDate}`
+}
+
+function buildProcedures(st) {
+  if (!st || !st.procedures?.length) return ''
+  return st.procedures
+    .map((p, i) => {
+      const tooth = p.tooth ? `#${p.tooth}` : 'tooth not specified'
+      if (p.type === 'filling') {
+        const fields = [
+          `${p.material} restoration on ${tooth}${p.surfaces?.length ? ` (${p.surfaces.join('')} surfaces)` : ''}`,
+          `decay depth: ${p.decayDepth}`,
+          `anesthesia: ${p.anesthesia}`,
+          `isolation: ${p.isolation}`,
+          `prep: ${p.prepMethod}`,
+          `etch: ${p.etchType} for ${p.etchTimeEnamel}s enamel and ${p.etchTimeDentin}s dentin`,
+          `bonding agent: ${p.bondingAgent}${p.msdsReviewed ? ' (applied per MSDS)' : ''}`,
+          `light-cured ${p.cureTimeSec}s per layer`,
+          `base/liner: ${p.base}`,
+          p.occlusionAdjusted ? 'occlusion checked and adjusted with articulating paper' : 'occlusion not adjusted',
+          p.additionalNotes ? `notes: ${p.additionalNotes}` : ''
+        ].filter(Boolean)
+        return `Procedure ${i + 1} — Filling ${tooth}: ${fields.join('; ')}`
+      }
+      if (p.type === 'crown') {
+        const isSeat = p.appointmentType === 'Seat'
+        const fields = isSeat
+          ? [
+              `${p.crownType} crown seated on ${tooth}`,
+              `anesthesia: ${p.anesthesia}`,
+              `cementation: ${p.cementation || 'not specified'}`,
+              p.additionalNotes ? `notes: ${p.additionalNotes}` : ''
+            ]
+          : [
+              `${p.crownType} crown preparation on ${tooth}`,
+              `anesthesia: ${p.anesthesia}`,
+              `reduction: ${p.reduction}`,
+              `margin: ${p.marginDesign}, ${p.marginLocation}`,
+              `retraction: ${p.retractionCord}`,
+              `impression: ${p.impression}`,
+              `shade: ${p.shade}`,
+              `temporary: ${p.temporary}`,
+              p.additionalNotes ? `notes: ${p.additionalNotes}` : ''
+            ]
+        return `Procedure ${i + 1} — Crown ${p.appointmentType} on ${tooth}: ${fields.filter(Boolean).join('; ')}`
+      }
+      if (p.type === 'extraction') {
+        const fields = [
+          `${p.type} extraction of ${tooth}`,
+          `anesthesia: ${p.anesthesia}`,
+          `technique: ${p.technique}`,
+          `complications: ${p.complications}`,
+          p.socketPreservation ? `socket preservation with ${p.graftMaterial || 'graft material'}` : 'no socket preservation',
+          `sutures: ${p.sutures}`,
+          `post-op: ${p.postOpInstructions}`,
+          p.additionalNotes ? `notes: ${p.additionalNotes}` : ''
+        ].filter(Boolean)
+        return `Procedure ${i + 1} — Extraction ${tooth}: ${fields.join('; ')}`
+      }
+      return ''
+    })
+    .filter(Boolean)
+    .join('\n')
 }
 
 function buildMedHx(m) {
@@ -158,28 +228,36 @@ Rules:
 8. Do NOT fabricate or infer findings not present in the data.
 9. Length: 200–400 words for comprehensive exams, 100–200 words for limited/emergency visits.
 10. Do not include headers, section labels, or bullet points. Flowing clinical narrative only.
-11. End with a brief statement of next steps (e.g., "Patient/guardian acknowledged understanding and was scheduled for follow-up.").`
+11. End with a brief statement of next steps (e.g., "Patient/guardian acknowledged understanding and was scheduled for follow-up.").
+12. For scheduled treatment visits: when PROCEDURES PERFORMED is provided, write a procedure note that preserves the full technical sequence (anesthesia, isolation, prep, etch protocol with acid type and durations, bonding agent + MSDS, cure time, base/liner, occlusion check for fillings; reduction, margin, retraction, impression, shade, temporary, cementation for crowns; technique, complications, sutures, post-op for extractions). These technical details are required for MCNA Louisiana Medicaid compliance and must appear verbatim in the narrative — do not abbreviate or summarize them away. Each procedure should be a clearly distinguishable paragraph or run of sentences, in the order provided.`
 
 export async function generateNote(rawData) {
   const data = sanitize(rawData)
   const v = data.visitSetup || {}
   const isEpsdt = v.patientType === 'epsdt'
+  const isScheduled = v.visitType === 'scheduled'
 
-  const sections = [
-    `VISIT: ${buildVisitNarrative(v)}`,
-    `MEDICAL HISTORY: ${buildMedHx(data.medicalHistory || {})}`,
-    `CHIEF COMPLAINT: ${buildCC(data.chiefComplaint || {})}`,
-    isEpsdt ? `EPSDT SCREENING: ${buildEpsdt(data.epsdtScreening)}` : '',
-    `SOFT TISSUE: ${buildSoftTissue(data.softTissue || {})}`,
-    `DENTAL FINDINGS (${data.dentitionType || 'permanent'} dentition): ${buildToothChart(data.toothChart || {})}`,
-    `PERIODONTAL: ${buildPerio(data.perio || {})}`,
-    `OCCLUSION: ${buildOcclusion(data.occlusion || {})}`,
-    `RADIOGRAPHS: ${buildRadiographs(data.radiographs || {})}`,
-    `TREATMENT RENDERED: ${buildTreatment(data.treatmentRendered)}`,
-    `DIAGNOSES: ${data.diagnoses?.join('; ') || 'None documented'}`,
-    `TREATMENT PLAN: ${buildPlan(data.treatmentPlan)}`,
-    `PATIENT EDUCATION: ${data.patientEducation?.join(', ') || 'None documented'}`
-  ].filter(Boolean)
+  const sections = isScheduled
+    ? [
+        `VISIT: ${buildVisitNarrative(v)}`,
+        `MEDICAL HISTORY: ${buildMedHx(data.medicalHistory || {})}`,
+        `PROCEDURES PERFORMED:\n${buildProcedures(data.scheduledTreatment) || 'None documented'}`
+      ]
+    : [
+        `VISIT: ${buildVisitNarrative(v)}`,
+        `MEDICAL HISTORY: ${buildMedHx(data.medicalHistory || {})}`,
+        `CHIEF COMPLAINT: ${buildCC(data.chiefComplaint || {})}`,
+        isEpsdt ? `EPSDT SCREENING: ${buildEpsdt(data.epsdtScreening)}` : '',
+        `SOFT TISSUE: ${buildSoftTissue(data.softTissue || {})}`,
+        `DENTAL FINDINGS (${data.dentitionType || 'permanent'} dentition): ${buildToothChart(data.toothChart || {})}`,
+        `PERIODONTAL: ${buildPerio(data.perio || {})}`,
+        `OCCLUSION: ${buildOcclusion(data.occlusion || {})}`,
+        `RADIOGRAPHS: ${buildRadiographs(data.radiographs || {})}`,
+        `TREATMENT RENDERED: ${buildTreatment(data.treatmentRendered)}`,
+        `DIAGNOSES: ${data.diagnoses?.join('; ') || 'None documented'}`,
+        `TREATMENT PLAN: ${buildPlan(data.treatmentPlan)}`,
+        `PATIENT EDUCATION: ${data.patientEducation?.join(', ') || 'None documented'}`
+      ].filter(Boolean)
 
   const userPrompt = `Generate a dental chart note from the following clinical data. Respond with ONLY the note text — no preamble, no explanation, no markdown formatting.\n\n${sections.join('\n')}`
 

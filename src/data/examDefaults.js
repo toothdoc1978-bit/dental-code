@@ -215,7 +215,8 @@ export const VISIT_TYPES = [
   { value: 'comprehensive', label: 'Comprehensive Exam' },
   { value: 'periodic', label: 'Periodic Exam' },
   { value: 'limited', label: 'Limited/Problem-Focused' },
-  { value: 'emergency', label: 'Emergency' }
+  { value: 'emergency', label: 'Emergency' },
+  { value: 'scheduled', label: 'Scheduled Treatment' }
 ]
 
 export const PATIENT_TYPES = [
@@ -223,3 +224,107 @@ export const PATIENT_TYPES = [
   { value: 'child', label: 'General Child', desc: 'Pediatric, non-EPSDT' },
   { value: 'adult', label: 'General Adult', desc: 'Adult patient' }
 ]
+
+export const PROVIDERS = ['Dr. Garner']
+
+export const PROCEDURE_TYPES = [
+  { value: 'filling', label: 'Filling' },
+  { value: 'crown', label: 'Crown' },
+  { value: 'extraction', label: 'Extraction' }
+]
+
+export const TOOTH_SURFACES_ALL = ['M', 'O', 'D', 'B', 'L', 'I']
+
+export const FILLING_DEFAULTS = {
+  tooth: '',
+  surfaces: [],
+  material: 'Composite',
+  decayDepth: 'Moderate (into dentin)',
+  anesthesia: '2% Lidocaine 1:100,000 epi, 1 carpule, infiltration',
+  isolation: 'Cotton rolls and dryangle',
+  prepMethod: 'Carbide bur',
+  etchType: '37% phosphoric acid',
+  etchTimeEnamel: 15,
+  etchTimeDentin: 30,
+  bondingAgent: 'Peak Universal Bond',
+  msdsReviewed: true,
+  cureTimeSec: 20,
+  base: 'Flowable composite liner',
+  occlusionAdjusted: true,
+  additionalNotes: ''
+}
+
+export const FILLING_OPTIONS = {
+  material: ['Composite', 'Amalgam', 'Glass ionomer (GIC)', 'Resin-modified glass ionomer (RMGI)'],
+  decayDepth: [
+    'Superficial (enamel only)',
+    'Moderate (into dentin)',
+    'Deep (close to pulp)',
+    'Near pulp exposure (indirect pulp cap placed)'
+  ],
+  prepMethod: ['Carbide bur', 'Air abrasion', 'Bur + air abrasion', 'Diamond bur'],
+  etchType: ['37% phosphoric acid', 'Self-etch (no separate acid)'],
+  bondingAgent: ['Peak Universal Bond', 'Scotchbond Universal', 'OptiBond', 'Other (specify in notes)'],
+  base: ['Flowable composite liner', 'RMGI base', 'Calcium hydroxide (Dycal)', 'None']
+}
+
+export const CROWN_DEFAULTS = {
+  tooth: '',
+  appointmentType: 'Prep',
+  crownType: 'PFM',
+  anesthesia: '2% Lidocaine 1:100,000 epi, 2 carpules',
+  reduction: '1.5mm occlusal, 1mm axial',
+  marginDesign: 'Chamfer',
+  marginLocation: 'Supragingival',
+  retractionCord: 'Single cord, size 000',
+  impression: 'PVS, single-step',
+  shade: 'A3',
+  temporary: 'Bis-acryl with temporary cement',
+  cementation: '',
+  additionalNotes: ''
+}
+
+export const CROWN_OPTIONS = {
+  appointmentType: ['Prep', 'Seat'],
+  crownType: ['PFM', 'Zirconia (monolithic)', 'E.max (lithium disilicate)', 'Full gold', 'Stainless steel (pediatric)'],
+  marginDesign: ['Chamfer', 'Shoulder', 'Shoulder with bevel', 'Knife-edge'],
+  marginLocation: ['Supragingival', 'Equigingival', 'Subgingival'],
+  retractionCord: ['Single cord, size 000', 'Single cord, size 00', 'Double cord (000 + 0)', 'No cord (laser troughing)'],
+  impression: ['PVS, single-step', 'PVS, two-step', 'Digital scan (intraoral)', 'Polyether'],
+  cementation: ['Glass ionomer (RelyX Luting Plus)', 'Resin cement (RelyX Unicem)', 'Zinc phosphate', 'Resin-modified glass ionomer']
+}
+
+export const EXTRACTION_DEFAULTS = {
+  tooth: '',
+  type: 'Simple',
+  anesthesia: '2% Lidocaine 1:100,000 epi, 2 carpules, infiltration + block',
+  technique: 'Forceps with elevator',
+  complications: 'None',
+  socketPreservation: false,
+  graftMaterial: '',
+  sutures: 'None',
+  postOpInstructions: 'Standard written and verbal post-op instructions given; hemostasis achieved',
+  additionalNotes: ''
+}
+
+export const EXTRACTION_OPTIONS = {
+  type: ['Simple', 'Surgical (flap and/or sectioning)'],
+  technique: [
+    'Forceps with elevator',
+    'Elevator only',
+    'Forceps with luxator',
+    'Surgical flap with sectioning',
+    'Surgical flap, sectioning, and bone removal'
+  ],
+  complications: [
+    'None',
+    'Root tip retained (informed and documented)',
+    'Root fracture',
+    'Buccal plate fracture',
+    'Sinus communication (Valsalva positive)',
+    'Sinus communication (Valsalva negative)',
+    'Other (specify in notes)'
+  ],
+  graftMaterial: ['Allograft (FDBA)', 'Xenograft (Bio-Oss)', 'Collagen plug only'],
+  sutures: ['None', '3-0 chromic gut', '4-0 chromic gut', '4-0 Vicryl', '4-0 silk', '5-0 PTFE']
+}

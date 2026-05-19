@@ -14,8 +14,17 @@ import Diagnoses from './components/Diagnoses.jsx'
 import TreatmentPlan from './components/TreatmentPlan.jsx'
 import PatientEducation from './components/PatientEducation.jsx'
 import NoteOutput from './components/NoteOutput.jsx'
+import ScheduledTreatment from './components/ScheduledTreatment.jsx'
 
-function getSteps(patientType) {
+function getSteps(patientType, visitType) {
+  if (visitType === 'scheduled') {
+    return [
+      { key: 'setup', label: 'Setup', Component: VisitSetup },
+      { key: 'medHx', label: 'Med Hx', Component: MedicalHistory },
+      { key: 'procs', label: 'Procedures', Component: ScheduledTreatment },
+      { key: 'note', label: 'Note', Component: NoteOutput }
+    ]
+  }
   const base = [
     { key: 'setup', label: 'Setup', Component: VisitSetup },
     { key: 'medHx', label: 'Med Hx', Component: MedicalHistory },
@@ -41,10 +50,18 @@ export default function App() {
   const store = useChartStore()
   const { state, setStep, resetForm } = store
 
-  const steps = useMemo(() => getSteps(state.visitSetup.patientType), [state.visitSetup.patientType])
+  const steps = useMemo(
+    () => getSteps(state.visitSetup.patientType, state.visitSetup.visitType),
+    [state.visitSetup.patientType, state.visitSetup.visitType]
+  )
   const safeStep = Math.min(state.currentStep, steps.length - 1)
   const Current = steps[safeStep].Component
-  const canAdvance = safeStep > 0 || (state.visitSetup.patientType && state.visitSetup.visitType && state.visitSetup.visitDate)
+  const setupComplete =
+    state.visitSetup.patientType &&
+    state.visitSetup.visitType &&
+    state.visitSetup.visitDate &&
+    (state.visitSetup.visitType !== 'scheduled' || state.visitSetup.provider)
+  const canAdvance = safeStep > 0 || setupComplete
 
   const onReset = () => {
     if (confirm('Reset entire chart? This cannot be undone.')) resetForm()
