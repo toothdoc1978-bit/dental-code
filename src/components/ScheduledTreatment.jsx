@@ -1,5 +1,8 @@
+import { useEffect } from 'react'
 import { Tile, Section, PageTitle, CheckChip } from './shared.jsx'
 import {
+  ANESTHESIA_OPTIONS,
+  CEREC_OPTIONS,
   PROCEDURE_TYPES,
   TOOTH_SURFACES_ALL,
   FILLING_DEFAULTS,
@@ -21,6 +24,13 @@ function makeProcedure(type) {
     extraction: EXTRACTION_DEFAULTS
   }[type]
   return { id: makeId(), type, ...defaults }
+}
+
+function isPosteriorTooth(toothStr) {
+  if (!toothStr) return false
+  const n = Number(toothStr)
+  if (!Number.isFinite(n)) return false
+  return (n >= 1 && n <= 3) || (n >= 14 && n <= 19) || (n >= 30 && n <= 32)
 }
 
 function Field({ label, children }) {
@@ -83,7 +93,62 @@ function SurfacePicker({ value, onChange }) {
   )
 }
 
+function AnesthesiaFields({ proc, update }) {
+  // Legacy-shape repair: rows that pre-date the structured split carried a single
+  // `anesthesia` string. Drop them onto the new defaults on first render so the
+  // Selects don't render empty controls.
+  useEffect(() => {
+    if (proc.anestheticDrug == null) {
+      update('anestheticDrug', ANESTHESIA_OPTIONS.drug[0])
+      const fallbackCarpules = proc.type === 'extraction' ? 2 : proc.type === 'crown' ? 1.5 : 1
+      update('anestheticCarpules', fallbackCarpules)
+      const fallbackTechnique = proc.type === 'extraction' ? 'Infiltration + IAN block' : 'Infiltration'
+      update('anestheticTechnique', fallbackTechnique)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return (
+    <>
+      <Field label="Anesthetic drug">
+        <Select value={proc.anestheticDrug} onChange={(v) => update('anestheticDrug', v)} options={ANESTHESIA_OPTIONS.drug} />
+      </Field>
+      <Field label="Carpules">
+        <NumberInput value={proc.anestheticCarpules} onChange={(v) => update('anestheticCarpules', v)} min="0.5" max="6" step="0.5" />
+      </Field>
+      <Field label="Technique">
+        <Select value={proc.anestheticTechnique} onChange={(v) => update('anestheticTechnique', v)} options={ANESTHESIA_OPTIONS.technique} />
+      </Field>
+    </>
+  )
+}
+
 function FillingForm({ proc, update }) {
+  const isAmalgam = proc.material === 'Amalgam'
+  const isComposite = proc.material === 'Composite'
+
+  // Heal legacy bondingAgent values that no longer appear in the option list.
+  useEffect(() => {
+    if (proc.bondingAgent && !FILLING_OPTIONS.bondingAgent.includes(proc.bondingAgent)) {
+      update('bondingAgent', FILLING_DEFAULTS.bondingAgent)
+    }
+    if (proc.material !== 'Amalgam' && !proc.desensitizers) {
+      update('desensitizers', ['None'])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const toggleDesensitizer = (opt) => {
+    const cur = proc.desensitizers || ['None']
+    if (opt === 'None') {
+      update('desensitizers', ['None'])
+      return
+    }
+    const has = cur.includes(opt)
+    const without = cur.filter((x) => x !== opt && x !== 'None')
+    const next = has ? without : [...without, opt]
+    update('desensitizers', next.length ? next : ['None'])
+  }
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -99,38 +164,68 @@ function FillingForm({ proc, update }) {
         <Field label="Decay depth (MCNA)">
           <Select value={proc.decayDepth} onChange={(v) => update('decayDepth', v)} options={FILLING_OPTIONS.decayDepth} />
         </Field>
-        <Field label="Anesthesia">
-          <TextInput value={proc.anesthesia} onChange={(v) => update('anesthesia', v)} />
-        </Field>
+        <AnesthesiaFields proc={proc} update={update} />
         <Field label="Isolation">
           <TextInput value={proc.isolation} onChange={(v) => update('isolation', v)} />
         </Field>
         <Field label="Prep method">
           <Select value={proc.prepMethod} onChange={(v) => update('prepMethod', v)} options={FILLING_OPTIONS.prepMethod} />
         </Field>
-        <Field label="Etch type">
-          <Select value={proc.etchType} onChange={(v) => update('etchType', v)} options={FILLING_OPTIONS.etchType} />
-        </Field>
-        <Field label="Etch time — enamel (sec)">
-          <NumberInput value={proc.etchTimeEnamel} onChange={(v) => update('etchTimeEnamel', v)} min="0" max="60" />
-        </Field>
-        <Field label="Etch time — dentin (sec)">
-          <NumberInput value={proc.etchTimeDentin} onChange={(v) => update('etchTimeDentin', v)} min="0" max="60" />
-        </Field>
-        <Field label="Bonding agent">
-          <Select value={proc.bondingAgent} onChange={(v) => update('bondingAgent', v)} options={FILLING_OPTIONS.bondingAgent} />
-        </Field>
-        <Field label="Light-cure time (sec per layer)">
-          <NumberInput value={proc.cureTimeSec} onChange={(v) => update('cureTimeSec', v)} min="0" max="120" />
-        </Field>
+        {!isAmalgam && (
+          <>
+            <Field label="Etch type">
+              <Select value={proc.etchType} onChange={(v) => update('etchType', v)} options={FILLING_OPTIONS.etchType} />
+            </Field>
+            <Field label="Etch time — enamel (sec)">
+              <NumberInput value={proc.etchTimeEnamel} onChange={(v) => update('etchTimeEnamel', v)} min="0" max="60" />
+            </Field>
+            <Field label="Etch time — dentin (sec)">
+              <NumberInput value={proc.etchTimeDentin} onChange={(v) => update('etchTimeDentin', v)} min="0" max="60" />
+            </Field>
+            <Field label="Bonding agent">
+              <Select value={proc.bondingAgent} onChange={(v) => update('bondingAgent', v)} options={FILLING_OPTIONS.bondingAgent} />
+            </Field>
+            <Field label="Light-cure time (sec per layer)">
+              <NumberInput value={proc.cureTimeSec} onChange={(v) => update('cureTimeSec', v)} min="0" max="120" />
+            </Field>
+          </>
+        )}
+        {isComposite && (
+          <Field label="Composite product">
+            <Select
+              value={proc.compositeProduct || FILLING_OPTIONS.compositeProduct[0]}
+              onChange={(v) => update('compositeProduct', v)}
+              options={FILLING_OPTIONS.compositeProduct}
+            />
+          </Field>
+        )}
         <Field label="Base / liner">
           <Select value={proc.base} onChange={(v) => update('base', v)} options={FILLING_OPTIONS.base} />
         </Field>
       </div>
+
+      {isAmalgam && (
+        <Field label="Desensitizer(s) placed under restoration">
+          <div className="flex flex-wrap gap-2">
+            {FILLING_OPTIONS.desensitizer.map((d) => (
+              <CheckChip
+                key={d}
+                active={(proc.desensitizers || ['None']).includes(d)}
+                onClick={() => toggleDesensitizer(d)}
+              >
+                {d}
+              </CheckChip>
+            ))}
+          </div>
+        </Field>
+      )}
+
       <div className="flex gap-3 mt-2">
-        <CheckChip active={proc.msdsReviewed} onClick={() => update('msdsReviewed', !proc.msdsReviewed)}>
-          Bonding agent applied per MSDS
-        </CheckChip>
+        {!isAmalgam && (
+          <CheckChip active={proc.msdsReviewed} onClick={() => update('msdsReviewed', !proc.msdsReviewed)}>
+            Bonding agent applied per MSDS
+          </CheckChip>
+        )}
         <CheckChip active={proc.occlusionAdjusted} onClick={() => update('occlusionAdjusted', !proc.occlusionAdjusted)}>
           Occlusion checked and adjusted
         </CheckChip>
@@ -142,24 +237,81 @@ function FillingForm({ proc, update }) {
   )
 }
 
+function CerecBlock({ proc, update }) {
+  // Auto-default Riva Star ON for posterior numeric teeth when vital. Once the user
+  // clicks the chip explicitly (true OR false), their choice persists.
+  useEffect(() => {
+    if (proc.vitality === 'Vital' && proc.rivaStarApplied === undefined) {
+      update('rivaStarApplied', isPosteriorTooth(proc.tooth))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proc.tooth, proc.vitality])
+
+  // Heal legacy cementation values that no longer appear in the option list.
+  useEffect(() => {
+    if (proc.cementation && !CROWN_OPTIONS.cementation.includes(proc.cementation)) {
+      update('cementation', CROWN_DEFAULTS.cementation)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <>
+      <Field label="Scan device">
+        <Select value={proc.cerecScanDevice} onChange={(v) => update('cerecScanDevice', v)} options={CEREC_OPTIONS.scanDevice} />
+      </Field>
+      <Field label="Mill">
+        <Select value={proc.cerecMill} onChange={(v) => update('cerecMill', v)} options={CEREC_OPTIONS.mill} />
+      </Field>
+      <Field label="Sintering / crystallization">
+        <Select value={proc.cerecCrystallization} onChange={(v) => update('cerecCrystallization', v)} options={CEREC_OPTIONS.crystallization} />
+      </Field>
+      <Field label="Crown material">
+        <Select value={proc.cerecCrownMaterial} onChange={(v) => update('cerecCrownMaterial', v)} options={CEREC_OPTIONS.crownMaterial} />
+      </Field>
+      <Field label="Pulpal vitality">
+        <Select value={proc.vitality} onChange={(v) => update('vitality', v)} options={CEREC_OPTIONS.vitality} />
+      </Field>
+      <Field label="Cementation">
+        <Select
+          value={proc.cementation || CROWN_OPTIONS.cementation[0]}
+          onChange={(v) => update('cementation', v)}
+          options={CROWN_OPTIONS.cementation}
+        />
+      </Field>
+      {proc.vitality === 'Vital' && (
+        <div className="md:col-span-2">
+          <CheckChip
+            active={!!proc.rivaStarApplied}
+            onClick={() => update('rivaStarApplied', !proc.rivaStarApplied)}
+          >
+            Riva Star desensitizer applied immediately post-scan
+          </CheckChip>
+        </div>
+      )}
+    </>
+  )
+}
+
 function CrownForm({ proc, update }) {
-  const isSeat = proc.appointmentType === 'Seat'
+  const apt = proc.appointmentType
+  const isPrep = apt === 'Prep (lab case)' || apt === 'Prep'
+  const isSeat = apt === 'Seat (lab case delivery)' || apt === 'Seat'
+  const isCerec = apt === 'Same-day CEREC'
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Field label="Tooth #">
-          <TextInput value={proc.tooth} onChange={(v) => update('tooth', v)} placeholder="e.g., 14" />
+          <TextInput value={proc.tooth} onChange={(v) => update('tooth', v)} placeholder="e.g., 19" />
         </Field>
         <Field label="Appointment">
-          <Select value={proc.appointmentType} onChange={(v) => update('appointmentType', v)} options={CROWN_OPTIONS.appointmentType} />
+          <Select value={apt} onChange={(v) => update('appointmentType', v)} options={CROWN_OPTIONS.appointmentType} />
         </Field>
         <Field label="Crown type">
           <Select value={proc.crownType} onChange={(v) => update('crownType', v)} options={CROWN_OPTIONS.crownType} />
         </Field>
-        <Field label="Anesthesia">
-          <TextInput value={proc.anesthesia} onChange={(v) => update('anesthesia', v)} />
-        </Field>
-        {!isSeat && (
+        <AnesthesiaFields proc={proc} update={update} />
+        {isPrep && (
           <>
             <Field label="Reduction">
               <TextInput value={proc.reduction} onChange={(v) => update('reduction', v)} />
@@ -193,6 +345,7 @@ function CrownForm({ proc, update }) {
             />
           </Field>
         )}
+        {isCerec && <CerecBlock proc={proc} update={update} />}
       </div>
       <Field label="Additional details">
         <TextArea value={proc.additionalNotes} onChange={(v) => update('additionalNotes', v)} />
@@ -211,9 +364,7 @@ function ExtractionForm({ proc, update }) {
         <Field label="Type">
           <Select value={proc.type} onChange={(v) => update('type', v)} options={EXTRACTION_OPTIONS.type} />
         </Field>
-        <Field label="Anesthesia">
-          <TextInput value={proc.anesthesia} onChange={(v) => update('anesthesia', v)} />
-        </Field>
+        <AnesthesiaFields proc={proc} update={update} />
         <Field label="Technique">
           <Select value={proc.technique} onChange={(v) => update('technique', v)} options={EXTRACTION_OPTIONS.technique} />
         </Field>
@@ -248,8 +399,12 @@ function ExtractionForm({ proc, update }) {
 
 function procSummary(p) {
   const tooth = p.tooth ? `#${p.tooth}` : '#?'
-  if (p.type === 'filling') return `Filling ${tooth} — ${p.surfaces?.join('') || 'surfaces?'}, ${p.material}`
-  if (p.type === 'crown') return `Crown ${tooth} — ${p.crownType}, ${p.appointmentType}`
+  if (p.type === 'filling') {
+    let tag = p.material
+    if (p.material === 'Composite') tag = `Composite (${p.compositeProduct || '?'})`
+    return `Filling ${tooth} — ${p.surfaces?.join('') || 'surfaces?'}, ${tag}`
+  }
+  if (p.type === 'crown') return `Crown ${tooth} — ${p.crownType}, ${p.appointmentType || 'Prep'}`
   if (p.type === 'extraction') return `Extraction ${tooth} — ${p.type === 'Simple' ? 'simple' : 'surgical'}`
   return p.type
 }

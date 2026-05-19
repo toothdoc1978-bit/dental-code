@@ -136,6 +136,14 @@ export function useChartStore() {
         if (parsed.radiographs?.taken?.length && typeof parsed.radiographs.taken[0] === 'string') {
           parsed.radiographs.taken = parsed.radiographs.taken.map((t) => ({ type: t, reason: '', panoIndications: [] }))
         }
+        if (parsed.scheduledTreatment?.procedures?.length) {
+          parsed.scheduledTreatment.procedures = parsed.scheduledTreatment.procedures.map((p) => {
+            if (p.type !== 'crown') return p
+            if (p.appointmentType === 'Prep') return { ...p, appointmentType: 'Prep (lab case)' }
+            if (p.appointmentType === 'Seat') return { ...p, appointmentType: 'Seat (lab case delivery)' }
+            return p
+          })
+        }
         dispatch({ type: 'HYDRATE', state: { ...initialState, ...parsed } })
       }
     } catch {}

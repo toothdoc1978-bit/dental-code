@@ -470,20 +470,42 @@ export const PROCEDURE_TYPES = [
 
 export const TOOTH_SURFACES_ALL = ['M', 'O', 'D', 'B', 'L', 'I']
 
+export const ANESTHESIA_OPTIONS = {
+  drug: [
+    'Septocaine (articaine) 4% with 1:200,000 epi',
+    'Septocaine (articaine) 4% with 1:100,000 epi',
+    'Lidocaine 2% with 1:100,000 epi'
+  ],
+  technique: [
+    'Infiltration',
+    'Inferior alveolar nerve block',
+    'PSA block',
+    'Mental/incisive block',
+    'Greater palatine block',
+    'Nasopalatine block',
+    'Buccal infiltration only',
+    'Infiltration + IAN block'
+  ]
+}
+
 export const FILLING_DEFAULTS = {
   tooth: '',
   surfaces: [],
   material: 'Composite',
   decayDepth: 'Moderate (into dentin)',
-  anesthesia: '2% Lidocaine 1:100,000 epi, 1 carpule, infiltration',
+  anestheticDrug: 'Septocaine (articaine) 4% with 1:200,000 epi',
+  anestheticCarpules: 1,
+  anestheticTechnique: 'Infiltration',
   isolation: 'Cotton rolls and dryangle',
   prepMethod: 'Carbide bur',
   etchType: '37% phosphoric acid',
   etchTimeEnamel: 15,
   etchTimeDentin: 30,
-  bondingAgent: 'Peak Universal Bond',
+  bondingAgent: 'Peak Universal Bond (Ultradent)',
   msdsReviewed: true,
   cureTimeSec: 20,
+  compositeProduct: 'Omnichroma packable',
+  desensitizers: ['None'],
   base: 'Flowable composite liner',
   occlusionAdjusted: true,
   additionalNotes: ''
@@ -499,15 +521,51 @@ export const FILLING_OPTIONS = {
   ],
   prepMethod: ['Carbide bur', 'Air abrasion', 'Bur + air abrasion', 'Diamond bur'],
   etchType: ['37% phosphoric acid', 'Self-etch (no separate acid)'],
-  bondingAgent: ['Peak Universal Bond', 'Scotchbond Universal', 'OptiBond', 'Other (specify in notes)'],
+  bondingAgent: [
+    'Peak Universal Bond (Ultradent)',
+    '3M Scotchbond Universal Plus',
+    'Tokuyama Universal Bond'
+  ],
+  compositeProduct: [
+    'Omnichroma packable',
+    'Omnichroma flowable',
+    'Omnichroma Blocker packable',
+    'Omnichroma Blocker flowable',
+    'Transcend (Ultradent)',
+    '3M Filtek Supreme'
+  ],
+  desensitizer: [
+    'Dycal (Ca(OH)₂)',
+    'generic Ca(OH)₂',
+    'IRM',
+    'Riva Star',
+    'GLUMA',
+    'Vitrebond (RMGI liner)',
+    'None'
+  ],
   base: ['Flowable composite liner', 'RMGI base', 'Calcium hydroxide (Dycal)', 'None']
+}
+
+export const CEREC_OPTIONS = {
+  scanDevice: ['CEREC Omnicam', 'CEREC Primescan', 'iTero', 'Other (specify in notes)'],
+  mill: ['MCXL 4-motor', 'CEREC Primemill', 'Other (specify in notes)'],
+  crystallization: [
+    'Programat CS / SpeedFire oven, full crystallization cycle',
+    'SpeedFire only (quick sinter)',
+    'Programat CS only',
+    'N/A (no crystallization required)'
+  ],
+  crownMaterial: ['Dentsply MTL Zirconia', 'E.max CAD', 'Zirlux', 'IPS Empress CAD'],
+  vitality: ['Vital', 'Non-vital', 'Previously RCT']
 }
 
 export const CROWN_DEFAULTS = {
   tooth: '',
-  appointmentType: 'Prep',
-  crownType: 'PFM',
-  anesthesia: '2% Lidocaine 1:100,000 epi, 2 carpules',
+  appointmentType: 'Same-day CEREC',
+  crownType: 'Zirconia (monolithic)',
+  anestheticDrug: 'Septocaine (articaine) 4% with 1:200,000 epi',
+  anestheticCarpules: 1.5,
+  anestheticTechnique: 'Infiltration',
   reduction: '1.5mm occlusal, 1mm axial',
   marginDesign: 'Chamfer',
   marginLocation: 'Supragingival',
@@ -515,24 +573,37 @@ export const CROWN_DEFAULTS = {
   impression: 'PVS, single-step',
   shade: 'A3',
   temporary: 'Bis-acryl with temporary cement',
-  cementation: '',
+  cementation: 'Fuji Evolve RMGI cement',
+  cerecScanDevice: 'CEREC Omnicam',
+  cerecMill: 'MCXL 4-motor',
+  cerecCrystallization: 'Programat CS / SpeedFire oven, full crystallization cycle',
+  cerecCrownMaterial: 'Dentsply MTL Zirconia',
+  vitality: 'Vital',
   additionalNotes: ''
 }
 
 export const CROWN_OPTIONS = {
-  appointmentType: ['Prep', 'Seat'],
+  appointmentType: ['Prep (lab case)', 'Same-day CEREC', 'Seat (lab case delivery)'],
   crownType: ['PFM', 'Zirconia (monolithic)', 'E.max (lithium disilicate)', 'Full gold', 'Stainless steel (pediatric)'],
   marginDesign: ['Chamfer', 'Shoulder', 'Shoulder with bevel', 'Knife-edge'],
   marginLocation: ['Supragingival', 'Equigingival', 'Subgingival'],
   retractionCord: ['Single cord, size 000', 'Single cord, size 00', 'Double cord (000 + 0)', 'No cord (laser troughing)'],
   impression: ['PVS, single-step', 'PVS, two-step', 'Digital scan (intraoral)', 'Polyether'],
-  cementation: ['Glass ionomer (RelyX Luting Plus)', 'Resin cement (RelyX Unicem)', 'Zinc phosphate', 'Resin-modified glass ionomer']
+  cementation: [
+    'Fuji Evolve RMGI cement',
+    'RelyX Unicem (resin cement)',
+    'RelyX Luting Plus (glass ionomer)',
+    'Zinc phosphate',
+    'Multilink'
+  ]
 }
 
 export const EXTRACTION_DEFAULTS = {
   tooth: '',
   type: 'Simple',
-  anesthesia: '2% Lidocaine 1:100,000 epi, 2 carpules, infiltration + block',
+  anestheticDrug: 'Septocaine (articaine) 4% with 1:200,000 epi',
+  anestheticCarpules: 2,
+  anestheticTechnique: 'Infiltration + IAN block',
   technique: 'Forceps with elevator',
   complications: 'None',
   socketPreservation: false,

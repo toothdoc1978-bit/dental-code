@@ -39,53 +39,104 @@ function buildVisitNarrative(v) {
   return `${types[v.visitType] || 'dental visit'} for a ${pts[v.patientType] || 'patient'}${provider} on ${v.visitDate}`
 }
 
+function anesthesiaPhrase(p) {
+  if (!p.anestheticDrug) return `anesthesia: ${p.anesthesia || 'not documented'}`
+  const carp = p.anestheticCarpules
+  const carpStr = carp == null ? '' : `, ${carp} carpule${carp === 1 ? '' : 's'}`
+  const tech = p.anestheticTechnique ? `, ${p.anestheticTechnique.toLowerCase()} technique` : ''
+  return `anesthesia: ${p.anestheticDrug}${carpStr}${tech}`
+}
+
+function desensitizerPhrase(list) {
+  const cleaned = (list || []).filter((d) => d && d !== 'None')
+  return cleaned.length ? `desensitizer(s) placed under restoration: ${cleaned.join(', ')}` : ''
+}
+
 function buildProcedures(st) {
   if (!st || !st.procedures?.length) return ''
   return st.procedures
     .map((p, i) => {
       const tooth = p.tooth ? `#${p.tooth}` : 'tooth not specified'
       if (p.type === 'filling') {
+        const isAmalgam = p.material === 'Amalgam'
+        const isComposite = p.material === 'Composite'
         const fields = [
           `${p.material} restoration on ${tooth}${p.surfaces?.length ? ` (${p.surfaces.join('')} surfaces)` : ''}`,
           `decay depth: ${p.decayDepth}`,
-          `anesthesia: ${p.anesthesia}`,
+          anesthesiaPhrase(p),
           `isolation: ${p.isolation}`,
-          `prep: ${p.prepMethod}`,
-          `etch: ${p.etchType} for ${p.etchTimeEnamel}s enamel and ${p.etchTimeDentin}s dentin`,
-          `bonding agent: ${p.bondingAgent}${p.msdsReviewed ? ' (applied per MSDS)' : ''}`,
-          `light-cured ${p.cureTimeSec}s per layer`,
-          `base/liner: ${p.base}`,
-          p.occlusionAdjusted ? 'occlusion checked and adjusted with articulating paper' : 'occlusion not adjusted',
-          p.additionalNotes ? `notes: ${p.additionalNotes}` : ''
-        ].filter(Boolean)
-        return `Procedure ${i + 1} — Filling ${tooth}: ${fields.join('; ')}`
+          `prep: ${p.prepMethod}`
+        ]
+        if (isAmalgam) {
+          const d = desensitizerPhrase(p.desensitizers)
+          if (d) fields.push(d)
+        } else {
+          fields.push(`etch: ${p.etchType} for ${p.etchTimeEnamel}s enamel and ${p.etchTimeDentin}s dentin`)
+          fields.push(`bonding agent: ${p.bondingAgent}${p.msdsReviewed ? ' (applied per MSDS)' : ''}`)
+          fields.push(`light-cured ${p.cureTimeSec}s per layer`)
+          if (isComposite && p.compositeProduct) {
+            fields.push(`restorative material placed: ${p.compositeProduct}, light-cured per manufacturer instructions`)
+          }
+        }
+        fields.push(`base/liner: ${p.base}`)
+        fields.push(p.occlusionAdjusted ? 'occlusion checked and adjusted with articulating paper' : 'occlusion not adjusted')
+        if (p.additionalNotes) fields.push(`notes: ${p.additionalNotes}`)
+        return `Procedure ${i + 1} — Filling ${tooth}: ${fields.filter(Boolean).join('; ')}`
       }
       if (p.type === 'crown') {
-        const isSeat = p.appointmentType === 'Seat'
-        const fields = isSeat
-          ? [
-              `${p.crownType} crown seated on ${tooth}`,
-              `anesthesia: ${p.anesthesia}`,
-              `cementation: ${p.cementation || 'not specified'}`,
-              p.additionalNotes ? `notes: ${p.additionalNotes}` : ''
-            ]
-          : [
-              `${p.crownType} crown preparation on ${tooth}`,
-              `anesthesia: ${p.anesthesia}`,
-              `reduction: ${p.reduction}`,
-              `margin: ${p.marginDesign}, ${p.marginLocation}`,
-              `retraction: ${p.retractionCord}`,
-              `impression: ${p.impression}`,
-              `shade: ${p.shade}`,
-              `temporary: ${p.temporary}`,
-              p.additionalNotes ? `notes: ${p.additionalNotes}` : ''
-            ]
-        return `Procedure ${i + 1} — Crown ${p.appointmentType} on ${tooth}: ${fields.filter(Boolean).join('; ')}`
+        const apt = p.appointmentType || 'Prep (lab case)'
+        const isSeat = apt === 'Seat (lab case delivery)' || apt === 'Seat'
+        const isCerec = apt === 'Same-day CEREC'
+        let fields
+        if (isSeat) {
+          fields = [
+            `${p.crownType} crown seated on ${tooth}`,
+            anesthesiaPhrase(p),
+            `cementation: ${p.cementation || 'not specified'}`
+          ]
+        } else if (isCerec) {
+          const vitalDetail =
+            p.vitality === 'Vital'
+              ? 'vital pulp'
+              : p.vitality === 'Non-vital'
+              ? 'non-vital tooth'
+              : p.vitality === 'Previously RCT'
+              ? 'previously endodontically treated tooth'
+              : ''
+          const showCrystallization =
+            p.cerecCrystallization && p.cerecCrystallization !== 'N/A (no crystallization required)'
+          const showRiva = p.vitality === 'Vital' && p.rivaStarApplied
+          fields = [
+            `same-day CEREC ${p.crownType} crown delivered on ${tooth}${vitalDetail ? ` (${vitalDetail})` : ''}`,
+            anesthesiaPhrase(p),
+            `digital impression captured with ${p.cerecScanDevice}`,
+            `crown milled on ${p.cerecMill}`,
+            showCrystallization ? `crystallization/sintering: ${p.cerecCrystallization}` : '',
+            `crown material: ${p.cerecCrownMaterial}`,
+            showRiva
+              ? 'Riva Star desensitizer was applied to the prepared dentin immediately following the digital scan to manage post-operative sensitivity in the vital tooth'
+              : '',
+            `cementation: ${p.cementation || 'not specified'}`
+          ]
+        } else {
+          fields = [
+            `${p.crownType} crown preparation on ${tooth}`,
+            anesthesiaPhrase(p),
+            `reduction: ${p.reduction}`,
+            `margin: ${p.marginDesign}, ${p.marginLocation}`,
+            `retraction: ${p.retractionCord}`,
+            `impression: ${p.impression}`,
+            `shade: ${p.shade}`,
+            `temporary: ${p.temporary}`
+          ]
+        }
+        if (p.additionalNotes) fields.push(`notes: ${p.additionalNotes}`)
+        return `Procedure ${i + 1} — Crown ${apt} on ${tooth}: ${fields.filter(Boolean).join('; ')}`
       }
       if (p.type === 'extraction') {
         const fields = [
           `${p.type} extraction of ${tooth}`,
-          `anesthesia: ${p.anesthesia}`,
+          anesthesiaPhrase(p),
           `technique: ${p.technique}`,
           `complications: ${p.complications}`,
           p.socketPreservation ? `socket preservation with ${p.graftMaterial || 'graft material'}` : 'no socket preservation',
