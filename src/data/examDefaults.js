@@ -634,3 +634,136 @@ export const EXTRACTION_OPTIONS = {
   graftMaterial: ['Allograft (FDBA)', 'Xenograft (Bio-Oss)', 'Collagen plug only'],
   sutures: ['None', '3-0 chromic gut', '4-0 chromic gut', '4-0 Vicryl', '4-0 silk', '5-0 PTFE']
 }
+
+// ---------------------------------------------------------------------------
+// Path A — Coding & audit (ported from clinicalsidecarv7.2.html)
+// ---------------------------------------------------------------------------
+
+// CDT ↔ ICD-10 crosswalk. Each entry exposes:
+//   code, desc, category (procedure category for consent derivation),
+//   primary ICD + label, two alternate ICDs + labels,
+//   docRequirements (audit doc), auditFlag (notable risk), consentCategory (pc).
+// `consentCategory` connects each procedure to one or more entries in CONSENTS.
+export const CDT_ICD10_CROSSWALK = [
+  { code: 'D0120', desc: 'Periodic oral evaluation', category: 'Diagnostic', primary: { icd: 'Z01.21', label: 'Exam with abnormal findings' }, alts: [{ icd: 'Z01.20', label: 'Normal findings' }], docRequirements: 'Document disease present or absent.', auditFlag: 'Must document findings', consentCategory: null },
+  { code: 'D0140', desc: 'Limited oral evaluation - problem focused', category: 'Diagnostic', primary: { icd: 'K02.52', label: 'Caries pit/fissure → dentin' }, alts: [{ icd: 'K04.01', label: 'Reversible pulpitis' }, { icd: 'K04.7', label: 'Periapical abscess' }], docRequirements: 'SOAP required. Justify limited vs periodic.', auditFlag: 'Must justify limited vs periodic', consentCategory: 'palliative' },
+  { code: 'D0150', desc: 'Comprehensive oral evaluation', category: 'Diagnostic', primary: { icd: 'Z01.21', label: 'Exam with abnormal findings' }, alts: [{ icd: 'Z01.20', label: 'Normal findings' }], docRequirements: 'Document disease present or absent.', auditFlag: 'Must document findings', consentCategory: null },
+  { code: 'D0180', desc: 'Comprehensive periodontal evaluation', category: 'Diagnostic', primary: { icd: 'Z01.21', label: 'Exam with abnormal findings' }, alts: [{ icd: 'K05.311', label: 'Chronic perio loc slight' }, { icd: 'K05.321', label: 'Chronic perio gen slight' }], docRequirements: 'Perio charting required.', auditFlag: 'Must have charting', consentCategory: 'periodontic' },
+  { code: 'D0210', desc: 'FMX radiographic survey', category: 'Diagnostic', primary: { icd: 'Z01.21', label: 'Exam with abnormal findings' }, alts: [{ icd: 'K02.9', label: 'Caries unspecified' }], docRequirements: 'Document indication.', auditFlag: 'Frequency limits', consentCategory: 'imaging' },
+  { code: 'D0220', desc: 'Periapical - first image', category: 'Diagnostic', primary: { icd: 'K04.01', label: 'Reversible pulpitis' }, alts: [{ icd: 'K02.52', label: 'Caries → dentin' }, { icd: 'K04.4', label: 'Acute apical periodontitis' }], docRequirements: 'Document reason for PA.', auditFlag: null, consentCategory: 'imaging' },
+  { code: 'D0272', desc: 'Bitewing - 2 images', category: 'Diagnostic', primary: { icd: 'Z01.21', label: 'Exam with abnormal findings' }, alts: [{ icd: 'K02.52', label: 'Caries → dentin' }, { icd: 'Z13.84', label: 'Screening dental disorders' }], docRequirements: 'Screening or diagnostic.', auditFlag: 'Frequency limits', consentCategory: 'imaging' },
+  { code: 'D0274', desc: 'Bitewing - 4 images', category: 'Diagnostic', primary: { icd: 'Z01.21', label: 'Exam with abnormal findings' }, alts: [{ icd: 'K02.52', label: 'Caries → dentin' }, { icd: 'Z13.84', label: 'Screening dental disorders' }], docRequirements: 'Screening or diagnostic.', auditFlag: 'Frequency limits', consentCategory: 'imaging' },
+  { code: 'D0330', desc: 'Panoramic radiographic image', category: 'Diagnostic', primary: { icd: 'Z01.21', label: 'Exam with abnormal findings' }, alts: [{ icd: 'K01.1', label: 'Impacted teeth' }], docRequirements: 'Document indication.', auditFlag: 'Justify pano vs FMX', consentCategory: 'imaging' },
+  { code: 'D1110', desc: 'Prophylaxis - adult', category: 'Preventive', primary: { icd: 'Z41.8', label: 'Procedure not remedying health' }, alts: [{ icd: 'K05.10', label: 'Chronic gingivitis' }, { icd: 'K03.6', label: 'Deposits on teeth' }], docRequirements: 'If gingivitis present, use K05.10.', auditFlag: 'Not same day as D4341/D4910', consentCategory: 'preventive' },
+  { code: 'D1120', desc: 'Prophylaxis - child', category: 'Preventive', primary: { icd: 'Z41.8', label: 'Procedure not remedying health' }, alts: [{ icd: 'K05.10', label: 'Chronic gingivitis' }, { icd: 'K03.6', label: 'Deposits on teeth' }], docRequirements: 'Add Z91.843 for MCNA EPSDT.', auditFlag: 'Not same day as D4341/D4910', consentCategory: 'preventive' },
+  { code: 'D1206', desc: 'Topical application of fluoride varnish', category: 'Preventive', primary: { icd: 'Z29.3', label: 'Prophylactic fluoride' }, alts: [{ icd: 'K02.61', label: 'Caries smooth → enamel' }, { icd: 'K02.51', label: 'Caries pit → enamel' }], docRequirements: 'Add K02 for demineralization.', auditFlag: 'Not same day as D1354', consentCategory: 'preventive' },
+  { code: 'D1354', desc: 'SDF (silver diamine fluoride) per tooth', category: 'Preventive', primary: { icd: 'K02.3', label: 'Arrested caries' }, alts: [{ icd: 'K02.52', label: 'Caries → dentin' }, { icd: 'K02.62', label: 'Smooth → dentin' }], docRequirements: 'Document teeth. SDF consent required (staining warning).', auditFlag: 'SDF consent required', consentCategory: 'sdf' },
+  { code: 'D2140', desc: 'Amalgam - one surface', category: 'Restorative', primary: { icd: 'K02.52', label: 'Caries pit/fissure → dentin' }, alts: [{ icd: 'K02.62', label: 'Smooth → dentin' }], docRequirements: 'Document surfaces.', auditFlag: null, consentCategory: 'restorative' },
+  { code: 'D2150', desc: 'Amalgam - two surfaces', category: 'Restorative', primary: { icd: 'K02.52', label: 'Caries pit/fissure → dentin' }, alts: [{ icd: 'K02.62', label: 'Smooth → dentin' }], docRequirements: 'Document surfaces.', auditFlag: null, consentCategory: 'restorative' },
+  { code: 'D2330', desc: 'Composite - one surface, anterior', category: 'Restorative', primary: { icd: 'K02.62', label: 'Smooth → dentin' }, alts: [{ icd: 'K02.52', label: 'Pit/fissure → dentin' }, { icd: 'S02.5XXA', label: 'Tooth fracture' }], docRequirements: 'Anteriors typically K02.62.', auditFlag: null, consentCategory: 'restorative' },
+  { code: 'D2331', desc: 'Composite - two surfaces, anterior', category: 'Restorative', primary: { icd: 'K02.62', label: 'Smooth → dentin' }, alts: [{ icd: 'K02.52', label: 'Pit/fissure → dentin' }], docRequirements: 'Document surfaces.', auditFlag: null, consentCategory: 'restorative' },
+  { code: 'D2391', desc: 'Composite - one surface, posterior', category: 'Restorative', primary: { icd: 'K02.52', label: 'Caries pit/fissure → dentin' }, alts: [{ icd: 'K02.62', label: 'Smooth → dentin' }], docRequirements: 'Posteriors typically K02.52.', auditFlag: null, consentCategory: 'restorative' },
+  { code: 'D2392', desc: 'Composite - two surfaces, posterior', category: 'Restorative', primary: { icd: 'K02.52', label: 'Caries pit/fissure → dentin' }, alts: [{ icd: 'K02.62', label: 'Smooth → dentin' }], docRequirements: 'Document surfaces.', auditFlag: null, consentCategory: 'restorative' },
+  { code: 'D2393', desc: 'Composite - three surfaces, posterior', category: 'Restorative', primary: { icd: 'K02.52', label: 'Caries pit/fissure → dentin' }, alts: [{ icd: 'K02.62', label: 'Smooth → dentin' }], docRequirements: 'Document surfaces.', auditFlag: 'Multi-surface: justify', consentCategory: 'restorative' },
+  { code: 'D2394', desc: 'Composite - four+ surfaces, posterior', category: 'Restorative', primary: { icd: 'K02.52', label: 'Caries pit/fissure → dentin' }, alts: [{ icd: 'K02.62', label: 'Smooth → dentin' }], docRequirements: 'Document surfaces.', auditFlag: 'High audit risk. Pre-op radiograph required.', consentCategory: 'restorative' },
+  { code: 'D2740', desc: 'Crown - porcelain/ceramic', category: 'Restorative', primary: { icd: 'K02.52', label: 'Caries → dentin' }, alts: [{ icd: 'K03.81', label: 'Cracked tooth' }, { icd: 'K08.539', label: 'Fractured restorative' }], docRequirements: 'Document why crown vs direct restoration.', auditFlag: 'Pre-auth typically required. Narrative + radiograph.', consentCategory: 'crown' },
+  { code: 'D2750', desc: 'Crown - PFM', category: 'Restorative', primary: { icd: 'K02.52', label: 'Caries → dentin' }, alts: [{ icd: 'K03.81', label: 'Cracked tooth' }, { icd: 'K08.539', label: 'Fractured restorative' }], docRequirements: 'Document reason for crown.', auditFlag: 'Pre-auth typically required.', consentCategory: 'crown' },
+  { code: 'D2950', desc: 'Core buildup, including any pins', category: 'Restorative', primary: { icd: 'K02.52', label: 'Caries → dentin' }, alts: [{ icd: 'K03.81', label: 'Cracked tooth' }], docRequirements: 'Document structure loss.', auditFlag: 'Must bill with crown.', consentCategory: 'crown' },
+  { code: 'D3220', desc: 'Pulpotomy - primary tooth', category: 'Endodontic', primary: { icd: 'K04.01', label: 'Reversible pulpitis' }, alts: [{ icd: 'K04.02', label: 'Irreversible pulpitis' }], docRequirements: 'Document pulpal diagnosis.', auditFlag: null, consentCategory: 'endodontic' },
+  { code: 'D3310', desc: 'Endodontic - anterior', category: 'Endodontic', primary: { icd: 'K04.02', label: 'Irreversible pulpitis' }, alts: [{ icd: 'K04.1', label: 'Pulp necrosis' }, { icd: 'K04.7', label: 'Periapical abscess' }], docRequirements: 'Pulpal diagnosis + vitality testing. PA required.', auditFlag: 'Pre-auth may be required.', consentCategory: 'endodontic' },
+  { code: 'D3320', desc: 'Endodontic - premolar', category: 'Endodontic', primary: { icd: 'K04.02', label: 'Irreversible pulpitis' }, alts: [{ icd: 'K04.1', label: 'Pulp necrosis' }, { icd: 'K04.7', label: 'Periapical abscess' }], docRequirements: 'Document pulpal diagnosis.', auditFlag: 'Pre-auth may be required.', consentCategory: 'endodontic' },
+  { code: 'D3330', desc: 'Endodontic - molar', category: 'Endodontic', primary: { icd: 'K04.02', label: 'Irreversible pulpitis' }, alts: [{ icd: 'K04.1', label: 'Pulp necrosis' }, { icd: 'K04.7', label: 'Periapical abscess' }], docRequirements: 'Pulpal diagnosis + vitality testing.', auditFlag: 'Pre-auth required. PA required.', consentCategory: 'endodontic' },
+  { code: 'D4341', desc: 'SRP - 4+ teeth per quadrant', category: 'Periodontic', primary: { icd: 'K05.321', label: 'Chronic perio gen slight' }, alts: [{ icd: 'K05.322', label: 'Generalized moderate' }, { icd: 'K05.323', label: 'Generalized severe' }], docRequirements: 'Full perio charting required.', auditFlag: 'Not same day as prophy.', consentCategory: 'periodontic' },
+  { code: 'D4342', desc: 'SRP - 1-3 teeth per quadrant', category: 'Periodontic', primary: { icd: 'K05.311', label: 'Chronic perio loc slight' }, alts: [{ icd: 'K05.312', label: 'Localized moderate' }, { icd: 'K05.313', label: 'Localized severe' }], docRequirements: 'Localized findings documented.', auditFlag: 'Perio charting required.', consentCategory: 'periodontic' },
+  { code: 'D4910', desc: 'Periodontal maintenance', category: 'Periodontic', primary: { icd: 'K05.321', label: 'Chronic perio gen slight' }, alts: [{ icd: 'K05.322', label: 'Generalized moderate' }, { icd: 'K05.323', label: 'Generalized severe' }], docRequirements: 'Prior perio therapy required.', auditFlag: 'Must follow SRP.', consentCategory: 'periodontic' },
+  { code: 'D7140', desc: 'Extraction - erupted tooth', category: 'Oral Surgery', primary: { icd: 'K02.53', label: 'Caries → pulp' }, alts: [{ icd: 'K04.7', label: 'Periapical abscess' }, { icd: 'K04.02', label: 'Irreversible pulpitis' }], docRequirements: 'Document caries into pulp / non-restorability.', auditFlag: 'Radiograph required.', consentCategory: 'extraction' },
+  { code: 'D7210', desc: 'Surgical extraction - erupted tooth', category: 'Oral Surgery', primary: { icd: 'K02.53', label: 'Caries → pulp' }, alts: [{ icd: 'K04.7', label: 'Periapical abscess' }, { icd: 'K04.02', label: 'Irreversible pulpitis' }], docRequirements: 'MUST document bone removal / sectioning.', auditFlag: 'Must justify surgical vs simple.', consentCategory: 'extraction' },
+  { code: 'D7220', desc: 'Removal of impacted tooth - soft tissue', category: 'Oral Surgery', primary: { icd: 'K01.1', label: 'Impacted teeth' }, alts: [{ icd: 'K04.7', label: 'Periapical abscess' }], docRequirements: 'Document impaction.', auditFlag: 'Radiograph required.', consentCategory: 'extraction' },
+  { code: 'D7250', desc: 'Removal of residual tooth roots', category: 'Oral Surgery', primary: { icd: 'K08.3', label: 'Retained root' }, alts: [{ icd: 'K04.7', label: 'Periapical abscess' }], docRequirements: 'Document retained root.', auditFlag: 'Radiograph required.', consentCategory: 'extraction' },
+  { code: 'D9110', desc: 'Palliative treatment', category: 'Other', primary: { icd: 'K04.02', label: 'Irreversible pulpitis' }, alts: [{ icd: 'K04.7', label: 'Periapical abscess' }, { icd: 'K04.4', label: 'Acute apical periodontitis' }], docRequirements: 'Document definitive plan.', auditFlag: 'Document definitive plan.', consentCategory: 'palliative' },
+  { code: 'D9230', desc: 'Nitrous oxide / analgesia', category: 'Other', primary: { icd: 'F93.8', label: 'Childhood dental anxiety' }, alts: [{ icd: 'F98.8', label: 'Behavioral disorder' }, { icd: 'F40.232', label: 'Fear of dental procedures' }], docRequirements: 'ADJUNCTIVE. Document behavior necessitating.', auditFlag: 'Must justify necessity.', consentCategory: 'nitrous' },
+  { code: 'D9940', desc: 'Occlusal guard', category: 'Other', primary: { icd: 'G47.63', label: 'Sleep bruxism' }, alts: [{ icd: 'K03.0', label: 'Excessive attrition' }, { icd: 'M26.60', label: 'TMJ disorder' }], docRequirements: 'Document bruxism / TMD.', auditFlag: 'Medical necessity required.', consentCategory: null }
+]
+
+export function lookupCrosswalk(code) {
+  if (!code) return null
+  return CDT_ICD10_CROSSWALK.find((x) => x.code === code) || null
+}
+
+// 10 standardized consent forms, derived per procedure category.
+// `triggers` lists which CDT consentCategory values require this consent.
+export const CONSENTS = [
+  { id: 'general', label: 'General Dental Treatment', triggers: ['restorative', 'preventive', 'palliative', 'endodontic', 'periodontic', 'crown', 'extraction', 'sdf', 'nitrous'] },
+  { id: 'imaging', label: 'Diagnostic Imaging & ALARA', triggers: ['imaging'] },
+  { id: 'cbct', label: 'CBCT / 3D Imaging', triggers: [] },
+  { id: 'local_anesthesia', label: 'Local Anesthesia Consent', triggers: ['restorative', 'endodontic', 'crown', 'extraction', 'periodontic'] },
+  { id: 'nitrous', label: 'Nitrous Oxide (N₂O) Consent', triggers: ['nitrous'] },
+  { id: 'extraction', label: 'Extraction Consent', triggers: ['extraction'] },
+  { id: 'endo', label: 'Root Canal Consent', triggers: ['endodontic'] },
+  { id: 'crown', label: 'Crown Consent', triggers: ['crown'] },
+  { id: 'sdf', label: 'SDF Consent (irreversible black staining)', triggers: ['sdf'] },
+  { id: 'sedation', label: 'Oral / IV Sedation Consent', triggers: [] }
+]
+
+// Returns sorted array of consent ids that should be on the consent form for
+// the given list of CDT codes (drawn from treatmentRendered + treatmentPlan).
+export function derivedRequiredConsents(cdtCodes) {
+  const categories = new Set(
+    cdtCodes
+      .map((c) => lookupCrosswalk(c)?.consentCategory)
+      .filter(Boolean)
+  )
+  const ids = new Set()
+  for (const c of CONSENTS) {
+    for (const t of c.triggers) if (categories.has(t)) ids.add(c.id)
+  }
+  return Array.from(ids)
+}
+
+// Medical-necessity templates for the highest-audit-risk procedures. The
+// template is filled with the user's tooth + surface + finding text so the
+// boilerplate medical-legal language is deterministic (not LLM-invented).
+export const MEDICAL_NECESSITY_TEMPLATES = {
+  D2391: ({ tooth, surfaces, findings }) =>
+    `Posterior composite restoration on tooth #${tooth || '[#]'}${surfaces ? `-${surfaces}` : ''} is necessary due to ${findings || 'diagnosed carious lesion confirmed clinically and radiographically'}. Preparation extended into dentin.`,
+  D2392: ({ tooth, surfaces, findings }) =>
+    `Two-surface posterior composite restoration on tooth #${tooth || '[#]'}${surfaces ? `-${surfaces}` : ''} is necessary due to ${findings || 'diagnosed carious lesion confirmed clinically and radiographically'}. Preparation extended into dentin per Medicaid criteria.`,
+  D2393: ({ tooth, surfaces, findings }) =>
+    `Three-surface posterior composite restoration on tooth #${tooth || '[#]'}${surfaces ? `-${surfaces}` : ''} is necessary due to ${findings || 'diagnosed carious lesion confirmed clinically and radiographically'}. Multi-surface restoration justified by extent of caries documented in chart and radiograph.`,
+  D2740: ({ tooth, findings }) =>
+    `Crown on tooth #${tooth || '[#]'} is necessary due to ${findings || 'extensive structural loss and/or cracked-tooth syndrome'}. Remaining tooth structure is insufficient for a direct restoration to achieve durable function.`,
+  D2750: ({ tooth, findings }) =>
+    `PFM crown on tooth #${tooth || '[#]'} is necessary due to ${findings || 'extensive structural loss and/or cracked-tooth syndrome'}. Remaining tooth structure is insufficient for a direct restoration.`,
+  D3310: ({ tooth, findings }) =>
+    `Anterior endodontic therapy on tooth #${tooth || '[#]'} is necessary — ${findings || 'pulpal vitality testing and periapical radiograph confirm pulpal pathology'}.`,
+  D3320: ({ tooth, findings }) =>
+    `Premolar endodontic therapy on tooth #${tooth || '[#]'} is necessary — ${findings || 'clinical testing and periapical radiograph confirm pulpal pathology'}.`,
+  D3330: ({ tooth, findings }) =>
+    `Molar endodontic therapy on tooth #${tooth || '[#]'} is necessary — ${findings || 'clinical testing and periapical radiograph confirm pulpal pathology'}.`,
+  D4341: ({ findings }) =>
+    `Scaling and root planing (4+ teeth per quadrant) is necessary — ${findings || 'periodontal charting demonstrates probing depths ≥4 mm with bleeding on probing and radiographic evidence of bone loss'}.`,
+  D7140: ({ tooth, findings }) =>
+    `Extraction of tooth #${tooth || '[#]'} is necessary — ${findings || 'tooth is non-restorable secondary to caries extending into the pulp; periapical radiograph confirms pathology'}.`,
+  D7210: ({ tooth, findings }) =>
+    `Surgical extraction of tooth #${tooth || '[#]'} is necessary — ${findings || 'sectioning and/or bone removal required for safe delivery; documented in operative note'}.`
+}
+
+// Returns a list of {code, sentence} medical-necessity statements for the
+// given treatmentRendered array. Items without a template are silently skipped.
+export function buildMedicalNecessitySentences(treatmentRendered) {
+  if (!Array.isArray(treatmentRendered)) return []
+  return treatmentRendered
+    .map((item) => {
+      const tmpl = MEDICAL_NECESSITY_TEMPLATES[item.cdtCode]
+      if (!tmpl) return null
+      return {
+        code: item.cdtCode,
+        sentence: tmpl({
+          tooth: item.teeth?.[0] || '',
+          surfaces: item.surfaces?.join('') || '',
+          findings: ''
+        })
+      }
+    })
+    .filter(Boolean)
+}

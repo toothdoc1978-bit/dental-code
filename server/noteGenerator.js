@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { buildMedicalNecessitySentences, CONSENTS } from '../src/data/examDefaults.js'
 
 const client = new Anthropic()
 
@@ -17,7 +18,8 @@ const ALLOWED_KEYS = new Set([
   'diagnoses',
   'treatmentPlan',
   'patientEducation',
-  'scheduledTreatment'
+  'scheduledTreatment',
+  'signedConsents'
 ])
 
 function sanitize(data) {
@@ -299,6 +301,25 @@ function buildPlan(items) {
     .join('; ')
 }
 
+function buildMedicalNecessityBlock(treatmentRendered) {
+  const sentences = buildMedicalNecessitySentences(treatmentRendered)
+  if (!sentences.length) return ''
+  const lines = sentences.map((s) => `  • [${s.code}] ${s.sentence}`)
+  return [
+    'MEDICAL_NECESSITY — Use the following pre-composed medical-necessity sentences verbatim or near-verbatim (preserve all clinical/legal language; you may smooth grammar to fit the narrative). These are required for payer audit defense:',
+    ...lines
+  ].join('\n')
+}
+
+function buildConsentsBlock(signedConsents) {
+  if (!Array.isArray(signedConsents) || !signedConsents.length) return ''
+  const labels = signedConsents
+    .map((id) => CONSENTS.find((c) => c.id === id)?.label || id)
+    .filter(Boolean)
+  if (!labels.length) return ''
+  return `CONSENTS_SIGNED: ${labels.join('; ')} — the note must explicitly confirm informed consent was obtained for these procedures/services.`
+}
+
 const SYSTEM_PROMPT = `You are a clinical documentation assistant for a licensed Louisiana dentist. Your task is to transform structured dental examination data into a professional chart note narrative suitable for a Dentrix G7 record.
 
 Rules:
@@ -347,7 +368,11 @@ Rules:
   Example 4 — diagnostic-question-led:
     "Evaluation of suspected mandibular pathology required diagnostic imaging that intraoral placement could not safely provide on account of the patient's age, anatomy, and behavioral tolerance; consistent with ALARA, a single digital extraoral acquisition utilizing pediatric dose-reduction and collimation was therefore preferred over repeated, non-diagnostic intraoral exposures."
 
-  (g) If multiple radiographs in the visit fall under this protocol, give each one its own freshly varied sentence — do not repeat the same structure twice in the same note.`
+  (g) If multiple radiographs in the visit fall under this protocol, give each one its own freshly varied sentence — do not repeat the same structure twice in the same note.
+
+15. MEDICAL NECESSITY — When the user prompt contains a MEDICAL_NECESSITY block, each listed sentence is required boilerplate for payer audit defense and must appear in the note. You may smooth grammar to integrate the sentence into the surrounding narrative, but you MUST preserve every clinically-relevant token (tooth number, surfaces, decay depth, "necessary due to", "non-restorable", "vitality testing and periapical radiograph confirm pulpal pathology", "probing depths ≥4 mm", "bone removal/sectioning required", etc.). Do not omit any of the sentences listed. If a sentence references a tooth or surface not otherwise mentioned in the data, treat it as authoritative.
+
+16. CONSENTS — When the user prompt contains a CONSENTS_SIGNED line, the note must include a brief, naturally phrased sentence confirming informed consent was obtained for the listed procedure(s)/service(s) (e.g., "Informed consent for crown therapy and local anesthesia was reviewed with the patient and obtained prior to treatment."). Do not list them as a bullet point — integrate into prose. If no CONSENTS_SIGNED line is present, do NOT invent consent language.`
 
 export async function generateNote(rawData) {
   const data = sanitize(rawData)
@@ -357,13 +382,17 @@ export async function generateNote(rawData) {
 
   const catchAllEntries = findCatchAllEntries(data.radiographs || {})
   const catchAllBlock = buildCatchAllBlock(catchAllEntries)
+  const necessityBlock = buildMedicalNecessityBlock(data.treatmentRendered)
+  const consentsBlock = buildConsentsBlock(data.signedConsents)
 
   const sections = (isScheduled
     ? [
         `VISIT: ${buildVisitNarrative(v)}`,
         `MEDICAL HISTORY: ${buildMedHx(data.medicalHistory || {})}`,
         `PROCEDURES PERFORMED:\n${buildProcedures(data.scheduledTreatment) || 'None documented'}`,
-        catchAllBlock
+        catchAllBlock,
+        necessityBlock,
+        consentsBlock
       ]
     : [
         `VISIT: ${buildVisitNarrative(v)}`,
@@ -379,7 +408,9 @@ export async function generateNote(rawData) {
         `TREATMENT RENDERED: ${buildTreatment(data.treatmentRendered)}`,
         `DIAGNOSES: ${data.diagnoses?.join('; ') || 'None documented'}`,
         `TREATMENT PLAN: ${buildPlan(data.treatmentPlan)}`,
-        `PATIENT EDUCATION: ${data.patientEducation?.join(', ') || 'None documented'}`
+        `PATIENT EDUCATION: ${data.patientEducation?.join(', ') || 'None documented'}`,
+        necessityBlock,
+        consentsBlock
       ]
   ).filter(Boolean)
 

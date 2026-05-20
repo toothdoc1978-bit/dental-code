@@ -81,6 +81,7 @@ export const initialState = {
   diagnoses: [],
   treatmentPlan: [],
   patientEducation: [],
+  signedConsents: [],
   generatedNote: '',
   currentStep: 0
 }

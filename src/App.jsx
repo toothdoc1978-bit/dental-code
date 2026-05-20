@@ -15,6 +15,8 @@ import TreatmentPlan from './components/TreatmentPlan.jsx'
 import PatientEducation from './components/PatientEducation.jsx'
 import NoteOutput from './components/NoteOutput.jsx'
 import ScheduledTreatment from './components/ScheduledTreatment.jsx'
+import Consents from './components/Consents.jsx'
+import Audit, { computeAuditScore } from './components/Audit.jsx'
 
 function getSteps(patientType, visitType) {
   if (visitType === 'scheduled') {
@@ -22,6 +24,8 @@ function getSteps(patientType, visitType) {
       { key: 'setup', label: 'Setup', Component: VisitSetup },
       { key: 'medHx', label: 'Med Hx', Component: MedicalHistory },
       { key: 'procs', label: 'Procedures', Component: ScheduledTreatment },
+      { key: 'consents', label: 'Consents', Component: Consents },
+      { key: 'audit', label: 'Audit', Component: Audit },
       { key: 'note', label: 'Note', Component: NoteOutput }
     ]
   }
@@ -41,6 +45,8 @@ function getSteps(patientType, visitType) {
     { key: 'dx', label: 'Dx', Component: Diagnoses },
     { key: 'plan', label: 'Tx Plan', Component: TreatmentPlan },
     { key: 'edu', label: 'Education', Component: PatientEducation },
+    { key: 'consents', label: 'Consents', Component: Consents },
+    { key: 'audit', label: 'Audit', Component: Audit },
     { key: 'note', label: 'Note', Component: NoteOutput }
   ]
   return [...base, ...epsdt, ...rest]
@@ -54,6 +60,7 @@ export default function App() {
     () => getSteps(state.visitSetup.patientType, state.visitSetup.visitType),
     [state.visitSetup.patientType, state.visitSetup.visitType]
   )
+  const auditScore = useMemo(() => computeAuditScore(state), [state])
   const safeStep = Math.min(state.currentStep, steps.length - 1)
   const Current = steps[safeStep].Component
   const setupComplete =
@@ -76,6 +83,18 @@ export default function App() {
             <p className="text-xs text-slate-500">Louisiana EPSDT / MCNA + General — No PHI stored</p>
           </div>
           <div className="flex items-center gap-2">
+            <span
+              title={`${auditScore.passing} of ${auditScore.total} required audit checks passing`}
+              className={`text-xs font-semibold px-2 py-1 rounded ${
+                auditScore.pct >= 90
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : auditScore.pct >= 70
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-red-100 text-red-700'
+              }`}
+            >
+              Audit {auditScore.pct}%
+            </span>
             <span className="text-sm text-slate-600">Step {safeStep + 1} of {steps.length}</span>
             <button onClick={onReset} className="btn-secondary text-sm">Reset</button>
           </div>
