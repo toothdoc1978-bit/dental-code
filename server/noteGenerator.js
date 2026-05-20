@@ -312,12 +312,13 @@ function buildMedicalNecessityBlock(treatmentRendered) {
 }
 
 function buildConsentsBlock(signedConsents) {
-  if (!Array.isArray(signedConsents) || !signedConsents.length) return ''
-  const labels = signedConsents
-    .map((id) => CONSENTS.find((c) => c.id === id)?.label || id)
-    .filter(Boolean)
-  if (!labels.length) return ''
-  return `CONSENTS_SIGNED: ${labels.join('; ')} — the note must explicitly confirm informed consent was obtained for these procedures/services.`
+  const labels = Array.isArray(signedConsents)
+    ? signedConsents.map((id) => CONSENTS.find((c) => c.id === id)?.label || id).filter(Boolean)
+    : []
+  if (!labels.length) {
+    return 'CONSENTS_STATUS: NONE_RECORDED — do NOT include any consent-obtained, informed-consent, or consent-discussed language anywhere in the note. The consent topic must be silently omitted.'
+  }
+  return `CONSENTS_SIGNED: ${labels.join('; ')} — include a single natural sentence in the note confirming informed consent was obtained for these specific services. Do not list as bullets.`
 }
 
 const SYSTEM_PROMPT = `You are a clinical documentation assistant for a licensed Louisiana dentist. Your task is to transform structured dental examination data into a professional chart note narrative suitable for a Dentrix G7 record.
@@ -372,7 +373,9 @@ Rules:
 
 15. MEDICAL NECESSITY — When the user prompt contains a MEDICAL_NECESSITY block, each listed sentence is required boilerplate for payer audit defense and must appear in the note. You may smooth grammar to integrate the sentence into the surrounding narrative, but you MUST preserve every clinically-relevant token (tooth number, surfaces, decay depth, "necessary due to", "non-restorable", "vitality testing and periapical radiograph confirm pulpal pathology", "probing depths ≥4 mm", "bone removal/sectioning required", etc.). Do not omit any of the sentences listed. If a sentence references a tooth or surface not otherwise mentioned in the data, treat it as authoritative.
 
-16. CONSENTS — When the user prompt contains a CONSENTS_SIGNED line, the note must include a brief, naturally phrased sentence confirming informed consent was obtained for the listed procedure(s)/service(s) (e.g., "Informed consent for crown therapy and local anesthesia was reviewed with the patient and obtained prior to treatment."). Do not list them as a bullet point — integrate into prose. If no CONSENTS_SIGNED line is present, do NOT invent consent language.`
+16. CONSENTS — The user prompt will always contain exactly one of these two lines whenever procedures are documented:
+  - CONSENTS_SIGNED — include exactly one natural sentence in the note confirming informed consent was obtained for the listed services. Do not list them as a bullet point — integrate into prose. Example: "Informed consent for crown therapy and local anesthesia was reviewed with the patient and obtained prior to treatment."
+  - CONSENTS_STATUS: NONE_RECORDED — this is a hard prohibition. Do NOT write any sentence containing the words "informed consent," "consent was obtained," "consent was reviewed," "consent for [anything]," or any similar phrasing. The consent topic is silently absent from the note. Do not flag the gap, do not warn, do not invent — just omit. Treat consent language the same way you would treat a clinical finding that wasn't documented: it doesn't appear.`
 
 export async function generateNote(rawData) {
   const data = sanitize(rawData)
