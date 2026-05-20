@@ -156,8 +156,15 @@ function buildProcedures(st) {
 
 function buildMedHx(m) {
   const parts = []
-  if (m.changesSinceLastVisit === false) parts.push('Medical history reviewed, no changes since last visit')
-  else if (m.changesSinceLastVisit === true) parts.push('Medical history reviewed, changes noted')
+  if (m.changesSinceLastVisit === false) parts.push('Medical history reviewed with patient, no changes reported since last visit')
+  else if (m.changesSinceLastVisit === true) {
+    const detail = (m.changesDetail || '').trim()
+    parts.push(
+      detail
+        ? `Medical history reviewed with patient; changes reported since last visit — ${detail}`
+        : 'Medical history reviewed with patient; changes reported since last visit (no detail captured in chart — flag in note rather than fabricate)'
+    )
+  }
   if (m.conditions?.length) parts.push(`Significant conditions: ${m.conditions.join(', ')}`)
   if (m.allergies?.includes('NKA')) parts.push('NKDA')
   else if (m.allergies?.length) parts.push(`Allergies: ${m.allergies.join(', ')}`)
@@ -311,6 +318,19 @@ function buildMedicalNecessityBlock(treatmentRendered) {
   ].join('\n')
 }
 
+function hasOperativeProcedure(treatmentRendered, scheduledTreatment) {
+  const renderedHasOperative = (treatmentRendered || []).some(
+    (t) => t.cdtCode && !/^D0/.test(t.cdtCode)
+  )
+  const scheduledHasOperative = (scheduledTreatment?.procedures || []).length > 0
+  return renderedHasOperative || scheduledHasOperative
+}
+
+function buildPostOpBlock(treatmentRendered, scheduledTreatment) {
+  if (!hasOperativeProcedure(treatmentRendered, scheduledTreatment)) return ''
+  return 'POSTOP_CONFIRMATION_REQUIRED — at least one operative (non-diagnostic) procedure was performed today. The Plan section must include exactly one sentence (in natural prose, not a bullet) confirming that post-operative care instructions were provided both orally AND in writing, and that the patient (or guardian/caregiver, when applicable) verbalized understanding of those instructions. Required for audit defense.'
+}
+
 function buildConsentsBlock(signedConsents) {
   const labels = Array.isArray(signedConsents)
     ? signedConsents.map((id) => CONSENTS.find((c) => c.id === id)?.label || id).filter(Boolean)
@@ -398,7 +418,9 @@ Rules:
 
 16. CONSENTS — The user prompt will always contain exactly one of these two lines whenever procedures are documented. Consent language, when included, lives in the Plan section.
   - CONSENTS_SIGNED — include exactly one natural sentence in the Plan confirming informed consent was obtained for the listed services. Do not list them as a bullet point — integrate into prose. Example: "Informed consent for crown therapy and local anesthesia was reviewed with the patient and obtained prior to treatment."
-  - CONSENTS_STATUS: NONE_RECORDED — this is a hard prohibition. Do NOT write any sentence containing the words "informed consent," "consent was obtained," "consent was reviewed," "consent for [anything]," or any similar phrasing anywhere in the note. The consent topic is silently absent. Do not flag the gap, do not warn, do not invent — just omit. Treat consent language the same way you would treat a clinical finding that wasn't documented: it doesn't appear.`
+  - CONSENTS_STATUS: NONE_RECORDED — this is a hard prohibition. Do NOT write any sentence containing the words "informed consent," "consent was obtained," "consent was reviewed," "consent for [anything]," or any similar phrasing anywhere in the note. The consent topic is silently absent. Do not flag the gap, do not warn, do not invent — just omit. Treat consent language the same way you would treat a clinical finding that wasn't documented: it doesn't appear.
+
+17. POST-OPERATIVE INSTRUCTIONS — when the user prompt contains a POSTOP_CONFIRMATION_REQUIRED line, the Plan section MUST conclude (or near-conclude, before the final next-step statement from rule #2) with exactly one natural sentence in prose confirming that post-operative care instructions were provided BOTH orally AND in writing, AND that the patient (or guardian/caregiver, when applicable) verbalized understanding of those instructions. The sentence must include all three concepts: oral delivery, written delivery, and the patient's expression of understanding. Vary the phrasing between regenerations (e.g., "Post-operative care instructions were reviewed verbally and provided in writing; the patient verbalized understanding." / "Both verbal and written post-operative instructions were given, and [PATIENT] indicated full understanding before being dismissed." / etc.). Do not list as a bullet. Do not omit any of the three concepts. When POSTOP_CONFIRMATION_REQUIRED is NOT present in the user prompt, do not add this sentence — it would be fabricated documentation.`
 
 export async function generateNote(rawData) {
   const data = sanitize(rawData)
@@ -410,6 +432,7 @@ export async function generateNote(rawData) {
   const catchAllBlock = buildCatchAllBlock(catchAllEntries)
   const necessityBlock = buildMedicalNecessityBlock(data.treatmentRendered)
   const consentsBlock = buildConsentsBlock(data.signedConsents)
+  const postOpBlock = buildPostOpBlock(data.treatmentRendered, data.scheduledTreatment)
 
   const sections = (isScheduled
     ? [
@@ -418,7 +441,8 @@ export async function generateNote(rawData) {
         `PROCEDURES PERFORMED:\n${buildProcedures(data.scheduledTreatment) || 'None documented'}`,
         catchAllBlock,
         necessityBlock,
-        consentsBlock
+        consentsBlock,
+        postOpBlock
       ]
     : [
         `VISIT: ${buildVisitNarrative(v)}`,
@@ -436,7 +460,8 @@ export async function generateNote(rawData) {
         `TREATMENT PLAN: ${buildPlan(data.treatmentPlan)}`,
         `PATIENT EDUCATION: ${data.patientEducation?.join(', ') || 'None documented'}`,
         necessityBlock,
-        consentsBlock
+        consentsBlock,
+        postOpBlock
       ]
   ).filter(Boolean)
 

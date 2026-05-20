@@ -1,10 +1,48 @@
 import { Tile, CheckChip, Section, YesNo, PageTitle } from './shared.jsx'
 import { MEDICAL_CONDITIONS, ALLERGY_OPTIONS } from '../data/examDefaults.js'
 
+function ChangesDetail({ value, onChange }) {
+  return (
+    <Section
+      title="Reported changes"
+      hint="New medications, recent surgeries or hospitalizations, significant health events, or age-related changes reported by the patient or guardian."
+    >
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="e.g., started lisinopril 20 mg; appendectomy 3 weeks ago; recent hospitalization for pneumonia; loss of spouse 2 months ago"
+        rows={4}
+        className="input w-full"
+      />
+    </Section>
+  )
+}
+
 export default function MedicalHistory({ store }) {
   const { state, setField, toggleItem } = store
   const m = state.medicalHistory
+  const isScheduled = state.visitSetup.visitType === 'scheduled'
   const nka = m.allergies.includes('NKA')
+
+  if (isScheduled) {
+    return (
+      <div>
+        <PageTitle
+          title="Medical History — Interim Review"
+          subtitle="Confirm the patient was asked about changes since the last visit, and capture anything new they reported."
+        />
+        <Section
+          title="Any changes to medical history since last visit?"
+          hint="Selecting Yes or No confirms the review was conducted. Use the textbox below to record any new medications, recent surgeries, hospitalizations, life events, or age-related changes."
+        >
+          <YesNo value={m.changesSinceLastVisit} onChange={(v) => setField('medicalHistory.changesSinceLastVisit', v)} />
+        </Section>
+        {m.changesSinceLastVisit === true && (
+          <ChangesDetail value={m.changesDetail} onChange={(v) => setField('medicalHistory.changesDetail', v)} />
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -13,6 +51,10 @@ export default function MedicalHistory({ store }) {
       <Section title="Changes since last visit?">
         <YesNo value={m.changesSinceLastVisit} onChange={(v) => setField('medicalHistory.changesSinceLastVisit', v)} />
       </Section>
+
+      {m.changesSinceLastVisit === true && (
+        <ChangesDetail value={m.changesDetail} onChange={(v) => setField('medicalHistory.changesDetail', v)} />
+      )}
 
       <Section title="Conditions" hint="Check all that apply">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">

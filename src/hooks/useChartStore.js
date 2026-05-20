@@ -15,6 +15,7 @@ export const initialState = {
   },
   medicalHistory: {
     changesSinceLastVisit: null,
+    changesDetail: '',
     conditions: [],
     allergies: [],
     medications: '',
