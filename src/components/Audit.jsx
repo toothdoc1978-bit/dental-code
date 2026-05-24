@@ -1,5 +1,11 @@
 import { Section, PageTitle } from './shared.jsx'
-import { CDT_ICD10_CROSSWALK, derivedRequiredConsents, lookupCrosswalk } from '../data/examDefaults.js'
+import {
+  CDT_ICD10_CROSSWALK,
+  derivedRequiredConsents,
+  lookupCrosswalk,
+  validateTreatmentCoding,
+  diagnosisIcdMismatch
+} from '../data/examDefaults.js'
 
 // Each check returns {status: 'pass'|'fail'|'warn', label, detail?}.
 // Status 'fail' deducts from the score; 'warn' renders but doesn't.
@@ -73,6 +79,26 @@ function runChecks(state) {
       status: 'warn',
       detail: flagged.map((p) => `${p.code}: ${p.flag}`).join(' • ')
     })
+  }
+
+  // Coding correctness — surface count and tooth arch (hard errors)
+  if (rendered.length) {
+    const codingIssues = validateTreatmentCoding(rendered)
+    checks.push({
+      label: 'Coding — surfaces and tooth position valid for each CDT code',
+      status: codingIssues.length === 0 ? 'pass' : 'fail',
+      detail: codingIssues.length ? codingIssues.map((i) => i.message).join(' • ') : ''
+    })
+
+    // Consistency — documented diagnoses reference each code's expected ICD-10 (advisory)
+    const dxIssues = diagnosisIcdMismatch(rendered, state.diagnoses)
+    if (dxIssues.length) {
+      checks.push({
+        label: 'Coding — diagnoses align with rendered procedure codes',
+        status: 'warn',
+        detail: dxIssues.map((i) => i.message).join(' • ')
+      })
+    }
   }
 
   // Radiograph ALARA rationale

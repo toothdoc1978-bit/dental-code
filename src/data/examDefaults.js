@@ -799,3 +799,108 @@ export function buildMedicalNecessitySentences(treatmentRendered) {
     })
     .filter(Boolean)
 }
+
+// ---------------------------------------------------------------------------
+// Coding-correctness & consistency validation (structured data, pre-generation)
+// ---------------------------------------------------------------------------
+
+// Surface-count and arch rules for surface-based restorative codes.
+// `surfaces`: exact count (number) or { min } for "N+". `arch` (optional):
+// the dental arch the code is restricted to.
+export const CDT_CODING_RULES = {
+  D2140: { surfaces: 1 },
+  D2150: { surfaces: 2 },
+  D2330: { surfaces: 1, arch: 'anterior' },
+  D2331: { surfaces: 2, arch: 'anterior' },
+  D2391: { surfaces: 1, arch: 'posterior' },
+  D2392: { surfaces: 2, arch: 'posterior' },
+  D2393: { surfaces: 3, arch: 'posterior' },
+  D2394: { surfaces: { min: 4 }, arch: 'posterior' }
+}
+
+const ANTERIOR_TEETH = new Set([6, 7, 8, 9, 10, 11, 22, 23, 24, 25, 26, 27])
+const POSTERIOR_TEETH = new Set([1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 28, 29, 30, 31, 32])
+
+// Returns 'anterior' | 'posterior' | null. null for non-numeric entries
+// (e.g. quadrant labels like "UR") so arch checks are skipped on those.
+export function toothArch(tooth) {
+  const n = Number(tooth)
+  if (!Number.isInteger(n)) return null
+  if (ANTERIOR_TEETH.has(n)) return 'anterior'
+  if (POSTERIOR_TEETH.has(n)) return 'posterior'
+  return null
+}
+
+// Validates surface count, surface/tooth presence, and tooth arch against
+// CDT_CODING_RULES. Returns [{ code, severity:'error', message }].
+export function validateTreatmentCoding(treatmentRendered) {
+  if (!Array.isArray(treatmentRendered)) return []
+  const issues = []
+  for (const item of treatmentRendered) {
+    const rule = CDT_CODING_RULES[item.cdtCode]
+    if (!rule) continue
+    const surfaces = item.surfaces || []
+    const teeth = item.teeth || []
+
+    if (!teeth.length) {
+      issues.push({ code: item.cdtCode, severity: 'error', message: `${item.cdtCode} requires a tooth number to be documented.` })
+    }
+
+    if (typeof rule.surfaces === 'number') {
+      if (surfaces.length !== rule.surfaces) {
+        const word = rule.surfaces === 1 ? 'one surface' : `${rule.surfaces} surfaces`
+        issues.push({
+          code: item.cdtCode,
+          severity: 'error',
+          message: `${item.cdtCode} requires exactly ${word} (found ${surfaces.length}${surfaces.length ? `: ${surfaces.join(', ')}` : ''}).`
+        })
+      }
+    } else if (rule.surfaces?.min != null) {
+      if (surfaces.length < rule.surfaces.min) {
+        issues.push({
+          code: item.cdtCode,
+          severity: 'error',
+          message: `${item.cdtCode} requires at least ${rule.surfaces.min} surfaces (found ${surfaces.length}).`
+        })
+      }
+    }
+
+    if (rule.arch) {
+      for (const t of teeth) {
+        const arch = toothArch(t)
+        if (arch && arch !== rule.arch) {
+          issues.push({
+            code: item.cdtCode,
+            severity: 'error',
+            message: `${item.cdtCode} is a ${rule.arch} code but tooth #${t} is ${arch}.`
+          })
+        }
+      }
+    }
+  }
+  return issues
+}
+
+// Warn-level: for each rendered code with a crosswalk entry, check that the
+// documented diagnoses reference one of the code's expected ICD-10 codes.
+// Returns [{ code, severity:'warn', message }].
+export function diagnosisIcdMismatch(treatmentRendered, diagnoses) {
+  if (!Array.isArray(treatmentRendered)) return []
+  const dxText = (diagnoses || []).join(' ')
+  const issues = []
+  for (const item of treatmentRendered) {
+    const entry = lookupCrosswalk(item.cdtCode)
+    if (!entry) continue
+    const expected = [entry.primary?.icd, ...(entry.alts || []).map((a) => a.icd)].filter(Boolean)
+    if (!expected.length) continue
+    const matched = expected.some((icd) => dxText.includes(icd))
+    if (!matched) {
+      issues.push({
+        code: item.cdtCode,
+        severity: 'warn',
+        message: `${item.cdtCode} (${entry.desc}) has no matching ICD-10 in the diagnoses — expected one of ${expected.join(', ')}.`
+      })
+    }
+  }
+  return issues
+}

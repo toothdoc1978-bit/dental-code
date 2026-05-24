@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "eval": "node evals/run.mjs",
     "eval:seed": "node evals/run.mjs --seed-only",
-    "eval:generate": "node evals/generate.mjs"
+    "eval:generate": "node evals/generate.mjs",
+    "eval:coding": "node evals/coding-validation.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
