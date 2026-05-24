@@ -49,14 +49,23 @@ function loadGeneratedCases() {
 let getNote
 if (EVAL_URL) {
   getNote = async (chart) => {
-    const res = await fetch(EVAL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chartData: chart })
-    })
-    const json = await res.json()
-    if (!json.note) throw new Error(`API error: ${JSON.stringify(json).slice(0, 200)}`)
-    return json.note
+    let lastErr
+    for (let i = 0; i < 4; i++) {
+      try {
+        const res = await fetch(EVAL_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chartData: chart })
+        })
+        const json = await res.json()
+        if (json.note) return json.note
+        lastErr = new Error(`API error: ${JSON.stringify(json).slice(0, 200)}`)
+      } catch (e) {
+        lastErr = e
+      }
+      await new Promise((r) => setTimeout(r, 500 * 2 ** i))
+    }
+    throw lastErr
   }
 } else {
   const mod = await import('../server/noteGenerator.js')

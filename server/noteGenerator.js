@@ -3,6 +3,27 @@ import { buildMedicalNecessitySentences, CONSENTS } from '../src/data/examDefaul
 
 const client = new Anthropic()
 
+const TRANSIENT_STATUS = new Set([408, 409, 429, 500, 502, 503, 504, 529])
+
+function isTransient(err) {
+  if (err?.status == null) return true // network / connection error, no HTTP status
+  return TRANSIENT_STATUS.has(err.status)
+}
+
+async function createWithRetry(params, { attempts = 4 } = {}) {
+  let lastErr
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await client.messages.create(params)
+    } catch (err) {
+      lastErr = err
+      if (i === attempts - 1 || !isTransient(err)) throw err
+      await new Promise((r) => setTimeout(r, 500 * 2 ** i))
+    }
+  }
+  throw lastErr
+}
+
 const ALLOWED_KEYS = new Set([
   'visitSetup',
   'medicalHistory',
@@ -501,7 +522,7 @@ export async function generateNote(rawData) {
 
   const userPrompt = `Generate a dental chart note from the following clinical data. Respond with ONLY the note text — no preamble, no explanation, no markdown formatting.\n\n${sections.join('\n')}`
 
-  const response = await client.messages.create({
+  const response = await createWithRetry({
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     temperature: 1,

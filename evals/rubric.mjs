@@ -85,7 +85,7 @@ export const RUBRIC = [
       const mentionsRad = m(note, /radiograph|bitewing|periapical|panoramic|imaging|film/i)
       const purpose = m(
         note,
-        /(ALARA|to (evaluat|assess|facilitat|confirm|determine|screen|rule out|investigat|visualiz)|due to|because|indicat|obtained to|taken to|for (the )?(evaluation|assessment|caries|pain|trauma|pathology|status|pre-extraction|periodontal))/i
+        /(ALARA|caries risk|high caries|bone loss|to (evaluat|assess|facilitat|confirm|determine|screen|rule out|investigat|visualiz)|due to|because|given|owing to|prompted by|secondary to|in light of|based on|warrant|indicat|obtained to|taken to|for (the )?(evaluation|assessment|caries|pain|trauma|pathology|status|pre-extraction|periodontal))/i
       )
       return mentionsRad && purpose
         ? { status: 'pass', detail: 'radiograph rationale present' }
