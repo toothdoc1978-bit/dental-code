@@ -87,8 +87,8 @@ function curingPhrase(p) {
 
 function etchPhrase(p) {
   if (p.etchType === 'No etch / self-adhesive') return 'self-adhesive protocol (no separate phosphoric-acid etch)'
-  if (p.etchType === 'Selective etch (enamel only)') return `selective etch — enamel only with 37% phosphoric acid for ${p.etchTimeEnamel ?? 30}s`
-  return `${p.etchType} — enamel ${p.etchTimeEnamel ?? 30}s, dentin ${p.etchTimeDentin ?? 15}s`
+  if (p.etchType === 'Selective etch (enamel only)') return `selective-etch technique — enamel only etched with 37% phosphoric acid for ${p.etchTimeEnamel ?? 30}s (dentin left unetched)`
+  return `total-etch technique with 37% phosphoric acid — enamel etched ${p.etchTimeEnamel ?? 30}s and dentin etched ${p.etchTimeDentin ?? 15}s`
 }
 
 function cleaningPhrase(p) {
