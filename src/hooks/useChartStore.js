@@ -1,6 +1,9 @@
 import { useReducer, useEffect, useCallback } from 'react'
+import { EPSDT_DEFAULT_COUNSELING, EPSDT_DEFAULT_EDUCATION } from '../data/examDefaults.js'
 
 const STORAGE_KEY = 'dental-chart-state-v1'
+
+const union = (a, b) => Array.from(new Set([...(a || []), ...(b || [])]))
 
 export const initialState = {
   visitSetup: {
@@ -59,7 +62,8 @@ export const initialState = {
     calculus: null,
     mobility: null,
     ohStatus: null,
-    fullChartDone: false
+    fullChartDone: false,
+    pediatricVisualExam: false
   },
   occlusion: {
     molarClassR: null,
@@ -83,6 +87,7 @@ export const initialState = {
   treatmentPlan: [],
   patientEducation: [],
   signedConsents: [],
+  epsdtDefaultsApplied: false,
   generatedNote: '',
   currentStep: 0
 }
@@ -114,6 +119,27 @@ function reducer(state, action) {
         : [...arr, action.item]
       return setPath(state, action.path, next)
     }
+    case 'SEED_EPSDT_DEFAULTS':
+      if (state.epsdtDefaultsApplied) return state
+      return {
+        ...state,
+        epsdtDefaultsApplied: true,
+        epsdtScreening: {
+          ...state.epsdtScreening,
+          counselingTopics: union(state.epsdtScreening.counselingTopics, EPSDT_DEFAULT_COUNSELING)
+        },
+        patientEducation: union(state.patientEducation, EPSDT_DEFAULT_EDUCATION)
+      }
+    case 'SEED_PEDIATRIC_PERIO':
+      return {
+        ...state,
+        perio: {
+          ...state.perio,
+          pediatricVisualExam: true,
+          periodontiumType: state.perio.periodontiumType || 'Periodontally Healthy',
+          ohStatus: state.perio.ohStatus || 'Good'
+        }
+      }
     case 'SET_STEP':
       return { ...state, currentStep: action.step }
     case 'SET_GENERATED_NOTE':
@@ -159,6 +185,8 @@ export function useChartStore() {
 
   const setField = useCallback((path, value) => dispatch({ type: 'SET_FIELD', path, value }), [])
   const toggleItem = useCallback((path, item) => dispatch({ type: 'TOGGLE_ARRAY_ITEM', path, item }), [])
+  const seedEpsdtDefaults = useCallback(() => dispatch({ type: 'SEED_EPSDT_DEFAULTS' }), [])
+  const seedPediatricPerio = useCallback(() => dispatch({ type: 'SEED_PEDIATRIC_PERIO' }), [])
   const setStep = useCallback((step) => dispatch({ type: 'SET_STEP', step }), [])
   const setGeneratedNote = useCallback((note) => dispatch({ type: 'SET_GENERATED_NOTE', note }), [])
   const resetForm = useCallback(() => {
@@ -166,5 +194,5 @@ export function useChartStore() {
     dispatch({ type: 'RESET_FORM' })
   }, [])
 
-  return { state, setField, toggleItem, setStep, setGeneratedNote, resetForm }
+  return { state, setField, toggleItem, seedEpsdtDefaults, seedPediatricPerio, setStep, setGeneratedNote, resetForm }
 }

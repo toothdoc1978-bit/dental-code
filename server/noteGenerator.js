@@ -220,6 +220,14 @@ function buildToothChart(chart) {
 }
 
 function buildPerio(p) {
+  if (p.pediatricVisualExam) {
+    const parts = [
+      `Age-appropriate visual periodontal assessment (patient under 12): ${p.periodontiumType || 'Periodontally Healthy'} on visual inspection`,
+      'comprehensive periodontal probing (bleeding on probing and pocket-depth charting) deferred as not clinically indicated at this age'
+    ]
+    if (p.ohStatus) parts.push(`oral hygiene status: ${p.ohStatus}`)
+    return parts.join('; ')
+  }
   const parts = []
   if (p.periodontiumType) parts.push(p.periodontiumType)
   if (p.bop) parts.push(`BOP: ${p.bop}`)

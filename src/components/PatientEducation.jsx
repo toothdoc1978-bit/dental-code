@@ -4,6 +4,9 @@ import { EDUCATION_TOPICS, EDUCATION_TOPICS_EPSDT } from '../data/examDefaults.j
 export default function PatientEducation({ store }) {
   const { state, toggleItem } = store
   const isEpsdt = state.visitSetup.patientType === 'epsdt'
+  const additionalTopics = isEpsdt
+    ? EDUCATION_TOPICS.filter((t) => t !== 'Denture/prosthesis care')
+    : EDUCATION_TOPICS
 
   return (
     <div>
@@ -21,7 +24,7 @@ export default function PatientEducation({ store }) {
 
       <Section title={isEpsdt ? 'Additional Topics' : 'Topics Discussed'}>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {EDUCATION_TOPICS.map((t) => (
+          {additionalTopics.map((t) => (
             <CheckChip key={t} active={state.patientEducation.includes(t)} onClick={() => toggleItem('patientEducation', t)}>{t}</CheckChip>
           ))}
         </div>

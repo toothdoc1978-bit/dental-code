@@ -1,9 +1,20 @@
+import { useEffect } from 'react'
 import { Tile, CheckChip, Section, YesNo, PageTitle } from './shared.jsx'
-import { EPSDT_RISK_FACTORS, EPSDT_COUNSELING_TOPICS, EPSDT_REFERRALS } from '../data/examDefaults.js'
+import {
+  EPSDT_RISK_FACTORS_RISK,
+  EPSDT_RISK_FACTORS_PROTECTIVE,
+  EPSDT_COUNSELING_TOPICS,
+  EPSDT_REFERRALS
+} from '../data/examDefaults.js'
 
 export default function EpsdtScreening({ store }) {
-  const { state, setField, toggleItem } = store
+  const { state, setField, toggleItem, seedEpsdtDefaults } = store
   const e = state.epsdtScreening
+
+  useEffect(() => {
+    if (!state.epsdtDefaultsApplied) seedEpsdtDefaults()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div>
@@ -53,9 +64,16 @@ export default function EpsdtScreening({ store }) {
         </div>
       </Section>
 
-      <Section title="Risk Factors / Protective Factors">
+      <Section title="Risk & Protective Factors" hint="Risk-increasing factors first; protective factors last">
+        <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-red-600">Risk-increasing</div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
+          {EPSDT_RISK_FACTORS_RISK.map((r) => (
+            <CheckChip key={r} active={e.riskFactors.includes(r)} onClick={() => toggleItem('epsdtScreening.riskFactors', r)}>{r}</CheckChip>
+          ))}
+        </div>
+        <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-green-700">Protective</div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {EPSDT_RISK_FACTORS.map((r) => (
+          {EPSDT_RISK_FACTORS_PROTECTIVE.map((r) => (
             <CheckChip key={r} active={e.riskFactors.includes(r)} onClick={() => toggleItem('epsdtScreening.riskFactors', r)}>{r}</CheckChip>
           ))}
         </div>

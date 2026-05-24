@@ -357,19 +357,34 @@ export const RADIOGRAPH_FINDINGS = [
   'Root resorption'
 ]
 
-export const EPSDT_RISK_FACTORS = [
-  'Active caries present',
-  'Visible plaque',
-  'High cariogenic diet',
+// Caries-risk assessment. Risk-increasing (negative) factors are grouped first
+// so the protective (positive) factors are the LAST buttons clickable.
+export const EPSDT_RISK_FACTORS_RISK = [
+  'Active caries / cavitated lesions',
+  'White spot lesions / early demineralization',
+  'Recent caries within past 24 months',
+  'Visible plaque accumulation',
+  'Deep pits and fissures',
+  'Enamel hypoplasia / developmental defects',
+  'High cariogenic / sugary diet',
+  'Frequent snacking between meals',
+  'Sugar-sweetened / acidic beverages',
   'Inadequate fluoride exposure',
-  'Xerostomia',
-  'Special healthcare needs',
+  'Xerostomia / reduced salivary flow',
+  'Orthodontic appliances present',
+  'Caregiver with active/recent caries',
+  'Special healthcare needs'
+]
+
+export const EPSDT_RISK_FACTORS_PROTECTIVE = [
   'Fluoride varnish applied',
   'Dental sealants present',
   'Good oral hygiene',
   'Regular dental care',
   'Fluoridated water source'
 ]
+
+export const EPSDT_RISK_FACTORS = [...EPSDT_RISK_FACTORS_RISK, ...EPSDT_RISK_FACTORS_PROTECTIVE]
 
 export const EPSDT_COUNSELING_TOPICS = [
   'Brushing technique',
@@ -384,6 +399,9 @@ export const EPSDT_COUNSELING_TOPICS = [
   'Injury prevention'
 ]
 
+// Pre-checked on every EPSDT exam encounter (documents OHI + dietary counseling).
+export const EPSDT_DEFAULT_COUNSELING = ['Brushing technique', 'Diet/sugar reduction']
+
 export const EPSDT_REFERRALS = [
   'Speech therapy',
   'Orthodontic evaluation',
@@ -394,17 +412,31 @@ export const EPSDT_REFERRALS = [
 
 export const EDUCATION_TOPICS_EPSDT = [
   'Toothbrushing technique (caregiver-assisted if young)',
+  'Early childhood caries prevention',
+  'Sugar-sweetened beverage reduction',
+  'Snacking frequency',
+  'Dietary counseling',
+  'Low pH + sugar effects of drinks explained',
+  'Avoidance of energy drinks',
+  'Marketing of drinks as healthy (misleading)',
   'Fluoride toothpaste — pea-sized amount',
   'Fluoride varnish benefits',
   'Bottle/sippy cup weaning',
-  'Sugar-sweetened beverage reduction',
-  'Snacking frequency',
   'Sealant recommendation',
   'Pacifier/digit habit cessation',
   'Teething/eruption timeline',
-  'Early childhood caries prevention',
   'Importance of regular dental visits',
   'Mouthguard for sports'
+]
+
+// Pre-checked on every EPSDT exam encounter (priority MCNA documentation topics).
+export const EPSDT_DEFAULT_EDUCATION = [
+  'Toothbrushing technique (caregiver-assisted if young)',
+  'Early childhood caries prevention',
+  'Sugar-sweetened beverage reduction',
+  'Snacking frequency',
+  'Dietary counseling',
+  'Low pH + sugar effects of drinks explained'
 ]
 
 export const EDUCATION_TOPICS = [
