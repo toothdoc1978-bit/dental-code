@@ -5,3 +5,6 @@ dist
 .DS_Store
 *.log
 .vercel
+evals/report.json
+evals/report.md
+evals/generated/*.json
