@@ -331,6 +331,27 @@ function buildPostOpBlock(treatmentRendered, scheduledTreatment) {
   return 'POSTOP_CONFIRMATION_REQUIRED — at least one operative (non-diagnostic) procedure was performed today. The Plan section must include exactly one sentence (in natural prose, not a bullet) confirming that post-operative care instructions were provided both orally AND in writing, and that the patient (or guardian/caregiver, when applicable) verbalized understanding of those instructions. Required for audit defense.'
 }
 
+function hasClosingDocProcedure(treatmentRendered, scheduledTreatment) {
+  const rendered = (treatmentRendered || []).some((t) => t.cdtCode && /^D[2356]/.test(t.cdtCode))
+  const scheduled = (scheduledTreatment?.procedures || []).some(
+    (p) => p.type === 'filling' || p.type === 'crown'
+  )
+  return rendered || scheduled
+}
+
+function buildClosingDocBlock(treatmentRendered, scheduledTreatment) {
+  if (!hasClosingDocProcedure(treatmentRendered, scheduledTreatment)) return ''
+  return [
+    'CLOSING_DOCUMENTATION_REQUIRED — at least one definitive restorative, endodontic, crown & bridge, or removable-prosthesis procedure was completed today. The Plan section must conclude with a brief closing-documentation statement, in natural prose (not bullets), covering ALL of the following clinical-attestation elements. This reflects the prevailing standard of care for definitive treatment and is required for audit defense:',
+    '  1. OCCLUSION — state that the occlusion was checked following the procedure and adjusted as needed. If a procedure-level occlusion flag in the data indicates it was NOT adjusted (or not applicable, e.g. a root canal prior to the buildup), reflect that accurately rather than asserting an adjustment.',
+    '  2. POST-OP INSTRUCTIONS — confirm post-operative care instructions were provided both orally AND in writing, and that the patient (or guardian/caregiver, when applicable) verbalized understanding. If POSTOP_CONFIRMATION_REQUIRED also appears in this prompt, THIS element satisfies it — do not write a second, separate post-op sentence.',
+    '  3. RISKS — state that the risks associated with the procedure were reviewed with the patient.',
+    '  4. PROGNOSIS — state that the prognosis for the treated tooth/teeth (or prosthesis) was discussed.',
+    '  5. REFERRAL — include a referral recommendation ONLY if one is clinically indicated by the data; if no referral is indicated, omit this element entirely. Do not fabricate a referral and do not assert "no referral needed" unless the data supports it.',
+    'Vary phrasing and clause order between regenerations so the closing statement does not read as a fixed macro. Elements 1–4 are mandatory; element 5 is conditional.'
+  ].join('\n')
+}
+
 function buildConsentsBlock(signedConsents) {
   const labels = Array.isArray(signedConsents)
     ? signedConsents.map((id) => CONSENTS.find((c) => c.id === id)?.label || id).filter(Boolean)
@@ -420,7 +441,9 @@ Rules:
   - CONSENTS_SIGNED — include exactly one natural sentence in the Plan confirming informed consent was obtained for the listed services. Do not list them as a bullet point — integrate into prose. Example: "Informed consent for crown therapy and local anesthesia was reviewed with the patient and obtained prior to treatment."
   - CONSENTS_STATUS: NONE_RECORDED — this is a hard prohibition. Do NOT write any sentence containing the words "informed consent," "consent was obtained," "consent was reviewed," "consent for [anything]," or any similar phrasing anywhere in the note. The consent topic is silently absent. Do not flag the gap, do not warn, do not invent — just omit. Treat consent language the same way you would treat a clinical finding that wasn't documented: it doesn't appear.
 
-17. POST-OPERATIVE INSTRUCTIONS — when the user prompt contains a POSTOP_CONFIRMATION_REQUIRED line, the Plan section MUST conclude (or near-conclude, before the final next-step statement from rule #2) with exactly one natural sentence in prose confirming that post-operative care instructions were provided BOTH orally AND in writing, AND that the patient (or guardian/caregiver, when applicable) verbalized understanding of those instructions. The sentence must include all three concepts: oral delivery, written delivery, and the patient's expression of understanding. Vary the phrasing between regenerations (e.g., "Post-operative care instructions were reviewed verbally and provided in writing; the patient verbalized understanding." / "Both verbal and written post-operative instructions were given, and [PATIENT] indicated full understanding before being dismissed." / etc.). Do not list as a bullet. Do not omit any of the three concepts. When POSTOP_CONFIRMATION_REQUIRED is NOT present in the user prompt, do not add this sentence — it would be fabricated documentation.`
+17. POST-OPERATIVE INSTRUCTIONS — when the user prompt contains a POSTOP_CONFIRMATION_REQUIRED line, the Plan section MUST conclude (or near-conclude, before the final next-step statement from rule #2) with exactly one natural sentence in prose confirming that post-operative care instructions were provided BOTH orally AND in writing, AND that the patient (or guardian/caregiver, when applicable) verbalized understanding of those instructions. The sentence must include all three concepts: oral delivery, written delivery, and the patient's expression of understanding. Vary the phrasing between regenerations (e.g., "Post-operative care instructions were reviewed verbally and provided in writing; the patient verbalized understanding." / "Both verbal and written post-operative instructions were given, and [PATIENT] indicated full understanding before being dismissed." / etc.). Do not list as a bullet. Do not omit any of the three concepts. When POSTOP_CONFIRMATION_REQUIRED is NOT present in the user prompt, do not add this sentence — it would be fabricated documentation.
+
+18. CLOSING DOCUMENTATION — when the user prompt contains a CLOSING_DOCUMENTATION_REQUIRED block (fired after definitive restorative, endodontic, crown & bridge, or removable-prosthesis procedures), follow that block's instructions exactly: conclude the Plan with a brief prose closing statement covering occlusion check, post-operative instructions (oral + written + verbalized understanding), risks reviewed, prognosis discussed, and — only when clinically indicated — a referral recommendation. This block SUPERSEDES rule #17: when CLOSING_DOCUMENTATION_REQUIRED is present, its post-op element is the only post-op confirmation needed; do not also emit a separate rule-#17 sentence. Vary clause order and phrasing between regenerations so the statement never reads as a fixed macro. When CLOSING_DOCUMENTATION_REQUIRED is NOT present, do not add this closing statement.`
 
 export async function generateNote(rawData) {
   const data = sanitize(rawData)
@@ -432,7 +455,8 @@ export async function generateNote(rawData) {
   const catchAllBlock = buildCatchAllBlock(catchAllEntries)
   const necessityBlock = buildMedicalNecessityBlock(data.treatmentRendered)
   const consentsBlock = buildConsentsBlock(data.signedConsents)
-  const postOpBlock = buildPostOpBlock(data.treatmentRendered, data.scheduledTreatment)
+  const closingDocBlock = buildClosingDocBlock(data.treatmentRendered, data.scheduledTreatment)
+  const postOpBlock = closingDocBlock ? '' : buildPostOpBlock(data.treatmentRendered, data.scheduledTreatment)
 
   const sections = (isScheduled
     ? [
@@ -442,7 +466,8 @@ export async function generateNote(rawData) {
         catchAllBlock,
         necessityBlock,
         consentsBlock,
-        postOpBlock
+        postOpBlock,
+        closingDocBlock
       ]
     : [
         `VISIT: ${buildVisitNarrative(v)}`,
@@ -461,7 +486,8 @@ export async function generateNote(rawData) {
         `PATIENT EDUCATION: ${data.patientEducation?.join(', ') || 'None documented'}`,
         necessityBlock,
         consentsBlock,
-        postOpBlock
+        postOpBlock,
+        closingDocBlock
       ]
   ).filter(Boolean)
 
