@@ -9,16 +9,56 @@ A fast, checkbox-driven dental charting companion that runs in a browser tab alo
 - **Unique notes per visit** — AI rewrites each note with varied sentence structure to avoid template-audit flags
 - **HIPAA-friendly** — no patient names, DOB, or Medicaid IDs are ever stored or sent to AI
 
-## Quick Start
+## Local Setup
+
+Run the app on your own machine for development or offline use.
+
+**Prerequisites:** Node.js 18+ and an [Anthropic API key](https://console.anthropic.com/).
 
 ```bash
+# 1. Clone and install
+git clone <your-repo-url> dental-code
+cd dental-code
 npm install
+
+# 2. Create your local env file from the template
 cp .env.example .env
-# add your ANTHROPIC_API_KEY to .env
-npm run dev
 ```
 
-Then open http://localhost:5173 in a browser tab next to Dentrix.
+Then open `.env` (it lives in the repo root, next to `package.json`) and paste your key:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...your-real-key...
+PORT=3001
+```
+
+`.env` is gitignored, so your key is never committed. Start the dev servers:
+
+```bash
+npm run dev          # Vite client + Express API together
+```
+
+Open http://localhost:5173 in a browser tab next to Dentrix.
+
+> **Note on the deployed app:** the live Vercel deployment does **not** use this
+> `.env`. Its key is stored as the `ANTHROPIC_API_KEY` environment variable in the
+> Vercel project (Settings → Environment Variables), so the hosted site already
+> works without any local setup. You only need a local `.env` to run the app or
+> the eval harness on your own machine.
+
+## Eval Harness
+
+A scored, regression-safe loop for improving note quality (details in
+[`evals/README.md`](evals/README.md)). Uses the same local `.env` for the key.
+
+```bash
+npm run eval:seed       # run the hand-written regression core
+npm run eval:generate   # generate diverse synthetic (PHI-free) encounters
+npm run eval            # score everything; writes evals/report.md
+
+# Or score the deployed API instead of local code (no key needed locally):
+EVAL_URL=https://dental-code.vercel.app/api/generate-note npm run eval:seed
+```
 
 ## How It Works
 
