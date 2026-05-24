@@ -10,7 +10,11 @@ import {
   CROWN_DEFAULTS,
   CROWN_OPTIONS,
   EXTRACTION_DEFAULTS,
-  EXTRACTION_OPTIONS
+  EXTRACTION_OPTIONS,
+  SEALANT_DEFAULTS,
+  SEALANT_OPTIONS,
+  ENDO_DEFAULTS,
+  ENDO_OPTIONS
 } from '../data/examDefaults.js'
 
 function makeId() {
@@ -20,10 +24,16 @@ function makeId() {
 function makeProcedure(type) {
   const defaults = {
     filling: FILLING_DEFAULTS,
+    sealant: SEALANT_DEFAULTS,
     crown: CROWN_DEFAULTS,
+    endo: ENDO_DEFAULTS,
     extraction: EXTRACTION_DEFAULTS
   }[type]
   return { id: makeId(), type, ...defaults }
+}
+
+function isInterproximal(surfaces) {
+  return (surfaces || []).some((s) => s === 'M' || s === 'D')
 }
 
 function isPosteriorTooth(toothStr) {
@@ -126,7 +136,7 @@ function FillingForm({ proc, update }) {
   const isAmalgam = proc.material === 'Amalgam'
   const isComposite = proc.material === 'Composite'
 
-  // Heal legacy bondingAgent values that no longer appear in the option list.
+  // Heal legacy values that pre-date new fields / no longer appear in option lists.
   useEffect(() => {
     if (proc.bondingAgent && !FILLING_OPTIONS.bondingAgent.includes(proc.bondingAgent)) {
       update('bondingAgent', FILLING_DEFAULTS.bondingAgent)
@@ -134,6 +144,12 @@ function FillingForm({ proc, update }) {
     if (proc.material !== 'Amalgam' && !proc.desensitizers) {
       update('desensitizers', ['None'])
     }
+    if (!FILLING_OPTIONS.isolation.includes(proc.isolation)) update('isolation', FILLING_DEFAULTS.isolation)
+    if (proc.prepCleaning == null) update('prepCleaning', FILLING_DEFAULTS.prepCleaning)
+    if (!FILLING_OPTIONS.etchType.includes(proc.etchType)) update('etchType', FILLING_DEFAULTS.etchType)
+    if (proc.matrixSystem == null) update('matrixSystem', FILLING_DEFAULTS.matrixSystem)
+    if (proc.hemostaticAgent == null) update('hemostaticAgent', FILLING_DEFAULTS.hemostaticAgent)
+    if (proc.fieldIsolatedDry == null) update('fieldIsolatedDry', true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -166,26 +182,41 @@ function FillingForm({ proc, update }) {
         </Field>
         <AnesthesiaFields proc={proc} update={update} />
         <Field label="Isolation">
-          <TextInput value={proc.isolation} onChange={(v) => update('isolation', v)} />
+          <Select value={proc.isolation} onChange={(v) => update('isolation', v)} options={FILLING_OPTIONS.isolation} />
+        </Field>
+        <Field label="Prep cleaning (then distilled-water rinse)">
+          <Select value={proc.prepCleaning} onChange={(v) => update('prepCleaning', v)} options={FILLING_OPTIONS.prepCleaning} />
         </Field>
         <Field label="Prep method">
           <Select value={proc.prepMethod} onChange={(v) => update('prepMethod', v)} options={FILLING_OPTIONS.prepMethod} />
+        </Field>
+        {isInterproximal(proc.surfaces) && (
+          <Field label="Matrix system (interproximal)">
+            <Select value={proc.matrixSystem} onChange={(v) => update('matrixSystem', v)} options={FILLING_OPTIONS.matrixSystem} />
+          </Field>
+        )}
+        <Field label="Hemostatic agent (if needed)">
+          <Select value={proc.hemostaticAgent} onChange={(v) => update('hemostaticAgent', v)} options={FILLING_OPTIONS.hemostaticAgent} />
         </Field>
         {!isAmalgam && (
           <>
             <Field label="Etch type">
               <Select value={proc.etchType} onChange={(v) => update('etchType', v)} options={FILLING_OPTIONS.etchType} />
             </Field>
-            <Field label="Etch time — enamel (sec)">
-              <NumberInput value={proc.etchTimeEnamel} onChange={(v) => update('etchTimeEnamel', v)} min="0" max="60" />
-            </Field>
-            <Field label="Etch time — dentin (sec)">
-              <NumberInput value={proc.etchTimeDentin} onChange={(v) => update('etchTimeDentin', v)} min="0" max="60" />
-            </Field>
+            {proc.etchType !== 'No etch / self-adhesive' && (
+              <Field label="Etch time — enamel (sec)">
+                <NumberInput value={proc.etchTimeEnamel} onChange={(v) => update('etchTimeEnamel', v)} min="0" max="60" />
+              </Field>
+            )}
+            {proc.etchType === '37% phosphoric acid' && (
+              <Field label="Etch time — dentin (sec)">
+                <NumberInput value={proc.etchTimeDentin} onChange={(v) => update('etchTimeDentin', v)} min="0" max="60" />
+              </Field>
+            )}
             <Field label="Bonding agent">
               <Select value={proc.bondingAgent} onChange={(v) => update('bondingAgent', v)} options={FILLING_OPTIONS.bondingAgent} />
             </Field>
-            <Field label="Light-cure time (sec per layer)">
+            <Field label="VALO cure time (sec per layer)">
               <NumberInput value={proc.cureTimeSec} onChange={(v) => update('cureTimeSec', v)} min="0" max="120" />
             </Field>
           </>
@@ -220,12 +251,131 @@ function FillingForm({ proc, update }) {
         </Field>
       )}
 
-      <div className="flex gap-3 mt-2">
+      <div className="flex flex-wrap gap-3 mt-2">
         {!isAmalgam && (
           <CheckChip active={proc.msdsReviewed} onClick={() => update('msdsReviewed', !proc.msdsReviewed)}>
             Bonding agent applied per MSDS
           </CheckChip>
         )}
+        {!isAmalgam && (
+          <CheckChip active={proc.valoPowerCures} onClick={() => update('valoPowerCures', !proc.valoPowerCures)}>
+            Extra 4s VALO power cures (multiple angles)
+          </CheckChip>
+        )}
+        <CheckChip active={proc.fieldIsolatedDry} onClick={() => update('fieldIsolatedDry', !proc.fieldIsolatedDry)}>
+          Field/prep isolated and kept dry
+        </CheckChip>
+        <CheckChip active={proc.occlusionAdjusted} onClick={() => update('occlusionAdjusted', !proc.occlusionAdjusted)}>
+          Occlusion checked and adjusted
+        </CheckChip>
+      </div>
+      <Field label="Additional details">
+        <TextArea value={proc.additionalNotes} onChange={(v) => update('additionalNotes', v)} />
+      </Field>
+    </>
+  )
+}
+
+function SealantForm({ proc, update }) {
+  const isResin = proc.material?.startsWith('Resin')
+  return (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Field label="Tooth #">
+          <TextInput value={proc.tooth} onChange={(v) => update('tooth', v)} placeholder="e.g., 3 (or 3,14,19,30)" />
+        </Field>
+        <Field label="Sealant material">
+          <Select value={proc.material} onChange={(v) => update('material', v)} options={SEALANT_OPTIONS.material} />
+        </Field>
+        <Field label="Isolation">
+          <Select value={proc.isolation} onChange={(v) => update('isolation', v)} options={SEALANT_OPTIONS.isolation} />
+        </Field>
+        {isResin && (
+          <>
+            <Field label="Etch time — enamel (sec)">
+              <NumberInput value={proc.etchTimeEnamel} onChange={(v) => update('etchTimeEnamel', v)} min="0" max="60" />
+            </Field>
+            <Field label="Bonding agent">
+              <Select value={proc.bondingAgent} onChange={(v) => update('bondingAgent', v)} options={FILLING_OPTIONS.bondingAgent} />
+            </Field>
+            <Field label="Flowable composite">
+              <Select value={proc.flowableProduct} onChange={(v) => update('flowableProduct', v)} options={FILLING_OPTIONS.compositeProduct} />
+            </Field>
+            <Field label="VALO cure time (sec per layer)">
+              <NumberInput value={proc.cureTimeSec} onChange={(v) => update('cureTimeSec', v)} min="0" max="120" />
+            </Field>
+          </>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-3 mt-2">
+        {isResin && (
+          <CheckChip active={proc.msdsReviewed} onClick={() => update('msdsReviewed', !proc.msdsReviewed)}>
+            Material placed per MSDS
+          </CheckChip>
+        )}
+        {isResin && (
+          <CheckChip active={proc.valoPowerCures} onClick={() => update('valoPowerCures', !proc.valoPowerCures)}>
+            Extra 4s VALO power cures (multiple angles)
+          </CheckChip>
+        )}
+        <CheckChip active={proc.fieldIsolatedDry} onClick={() => update('fieldIsolatedDry', !proc.fieldIsolatedDry)}>
+          Field isolated and kept dry
+        </CheckChip>
+      </div>
+      <Field label="Additional details">
+        <TextArea value={proc.additionalNotes} onChange={(v) => update('additionalNotes', v)} />
+      </Field>
+    </>
+  )
+}
+
+function EndoForm({ proc, update }) {
+  return (
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Field label="Tooth #">
+          <TextInput value={proc.tooth} onChange={(v) => update('tooth', v)} placeholder="e.g., 30" />
+        </Field>
+        <Field label="Tooth type">
+          <Select value={proc.toothType} onChange={(v) => update('toothType', v)} options={ENDO_OPTIONS.toothType} />
+        </Field>
+        <AnesthesiaFields proc={proc} update={update} />
+        <Field label="Isolation">
+          <Select value={proc.isolation} onChange={(v) => update('isolation', v)} options={['Rubber dam']} />
+        </Field>
+        <Field label="Canals located/treated">
+          <TextInput value={proc.canals} onChange={(v) => update('canals', v)} placeholder="e.g., MB, ML, DB, DL (4)" />
+        </Field>
+        <Field label="Working length">
+          <TextInput value={proc.workingLength} onChange={(v) => update('workingLength', v)} />
+        </Field>
+        <Field label="Irrigation">
+          <Select value={proc.irrigation} onChange={(v) => update('irrigation', v)} options={ENDO_OPTIONS.irrigation} />
+        </Field>
+        <Field label="Obturation">
+          <Select value={proc.obturation} onChange={(v) => update('obturation', v)} options={ENDO_OPTIONS.obturation} />
+        </Field>
+        {proc.buildupPlaced && (
+          <>
+            <Field label="Build-up material">
+              <Select value={proc.buildupMaterial} onChange={(v) => update('buildupMaterial', v)} options={ENDO_OPTIONS.buildupMaterial} />
+            </Field>
+            <Field label="Build-up matrix system">
+              <Select value={proc.matrixSystem} onChange={(v) => update('matrixSystem', v)} options={ENDO_OPTIONS.matrixSystem} />
+            </Field>
+            <Field label="VALO cure time (sec per layer)">
+              <NumberInput value={proc.cureTimeSec} onChange={(v) => update('cureTimeSec', v)} min="0" max="120" />
+            </Field>
+          </>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-3 mt-2">
+        <CheckChip active={proc.buildupPlaced} onClick={() => update('buildupPlaced', !proc.buildupPlaced)}>
+          Post-endo core build-up placed
+        </CheckChip>
+        <CheckChip active={proc.fieldIsolatedDry} onClick={() => update('fieldIsolatedDry', !proc.fieldIsolatedDry)}>
+          Field isolated and kept dry
+        </CheckChip>
         <CheckChip active={proc.occlusionAdjusted} onClick={() => update('occlusionAdjusted', !proc.occlusionAdjusted)}>
           Occlusion checked and adjusted
         </CheckChip>
@@ -325,6 +475,13 @@ function CrownForm({ proc, update }) {
             <Field label="Retraction cord">
               <Select value={proc.retractionCord} onChange={(v) => update('retractionCord', v)} options={CROWN_OPTIONS.retractionCord} />
             </Field>
+            <Field label="Hemostatic agent">
+              <Select
+                value={proc.hemostaticAgent || CROWN_OPTIONS.hemostaticAgent[0]}
+                onChange={(v) => update('hemostaticAgent', v)}
+                options={CROWN_OPTIONS.hemostaticAgent}
+              />
+            </Field>
             <Field label="Impression">
               <Select value={proc.impression} onChange={(v) => update('impression', v)} options={CROWN_OPTIONS.impression} />
             </Field>
@@ -347,6 +504,13 @@ function CrownForm({ proc, update }) {
         )}
         {isCerec && <CerecBlock proc={proc} update={update} />}
       </div>
+      {(isPrep || isCerec) && (
+        <div className="flex flex-wrap gap-3 mt-2">
+          <CheckChip active={proc.fieldIsolatedDry} onClick={() => update('fieldIsolatedDry', !proc.fieldIsolatedDry)}>
+            Field/prep isolated and kept dry
+          </CheckChip>
+        </div>
+      )}
       <Field label="Additional details">
         <TextArea value={proc.additionalNotes} onChange={(v) => update('additionalNotes', v)} />
       </Field>
@@ -404,9 +568,19 @@ function procSummary(p) {
     if (p.material === 'Composite') tag = `Composite (${p.compositeProduct || '?'})`
     return `Filling ${tooth} — ${p.surfaces?.join('') || 'surfaces?'}, ${tag}`
   }
+  if (p.type === 'sealant') return `Sealant ${tooth} — ${(p.material || '').split(' (')[0]}`
   if (p.type === 'crown') return `Crown ${tooth} — ${p.crownType}, ${p.appointmentType || 'Prep'}`
+  if (p.type === 'endo') return `Endo ${tooth} — ${p.toothType}${p.buildupPlaced ? ' + build-up' : ''}`
   if (p.type === 'extraction') return `Extraction ${tooth} — ${p.type === 'Simple' ? 'simple' : 'surgical'}`
   return p.type
+}
+
+const FORM_BY_TYPE = {
+  filling: FillingForm,
+  sealant: SealantForm,
+  crown: CrownForm,
+  endo: EndoForm,
+  extraction: ExtractionForm
 }
 
 export default function ScheduledTreatment({ store }) {
@@ -451,7 +625,7 @@ export default function ScheduledTreatment({ store }) {
 
       {procedures.map((proc, idx) => {
         const update = (key, value) => updateProcedure(proc.id, key, value)
-        const Form = proc.type === 'filling' ? FillingForm : proc.type === 'crown' ? CrownForm : ExtractionForm
+        const Form = FORM_BY_TYPE[proc.type] || FillingForm
         return (
           <div key={proc.id} className="mb-6 border border-slate-200 rounded-lg overflow-hidden">
             <div className="bg-slate-50 px-4 py-2 flex items-center justify-between border-b border-slate-200">

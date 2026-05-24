@@ -496,7 +496,9 @@ export const PROVIDERS = ['Dr. Garner']
 
 export const PROCEDURE_TYPES = [
   { value: 'filling', label: 'Filling' },
+  { value: 'sealant', label: 'Sealant' },
   { value: 'crown', label: 'Crown' },
+  { value: 'endo', label: 'Endodontic / Build-up' },
   { value: 'extraction', label: 'Extraction' }
 ]
 
@@ -520,6 +522,41 @@ export const ANESTHESIA_OPTIONS = {
   ]
 }
 
+// Shared protocol option lists used across restorative/endo/sealant procedures.
+export const ISOLATION_OPTIONS = ['Isolite', 'Cotton rolls / DriAngle', 'Rubber dam']
+
+export const PREP_CLEANING_OPTIONS = [
+  'Air/water',
+  'IPA (isopropyl alcohol)',
+  'Consepsis Scrub',
+  'Consepsis',
+  'Clean & Boost'
+]
+
+export const ETCH_TYPES = [
+  '37% phosphoric acid',
+  'Selective etch (enamel only)',
+  'No etch / self-adhesive'
+]
+
+export const MATRIX_SYSTEMS = [
+  'V-ring + plastic wedge',
+  'Mylar strip + wooden wedge',
+  'Disposable Tofflemire + wooden wedge',
+  'Plastic wedge with built-in matrix'
+]
+
+export const HEMOSTATIC_AGENTS = [
+  'None',
+  'ViscoStat',
+  'Hemodent',
+  'Lidocaine 1:50k epi',
+  'EpiPellets',
+  'BlueMousse + Traxodent'
+]
+
+export const CURING_LIGHT = 'Ultradent VALO'
+
 export const FILLING_DEFAULTS = {
   tooth: '',
   surfaces: [],
@@ -528,17 +565,22 @@ export const FILLING_DEFAULTS = {
   anestheticDrug: 'Septocaine (articaine) 4% with 1:200,000 epi',
   anestheticCarpules: 1,
   anestheticTechnique: 'Infiltration',
-  isolation: 'Cotton rolls and dryangle',
+  isolation: 'Isolite',
+  prepCleaning: 'Consepsis Scrub',
   prepMethod: 'Carbide bur',
   etchType: '37% phosphoric acid',
-  etchTimeEnamel: 15,
-  etchTimeDentin: 30,
+  etchTimeEnamel: 30,
+  etchTimeDentin: 15,
   bondingAgent: 'Peak Universal Bond (Ultradent)',
   msdsReviewed: true,
+  matrixSystem: 'V-ring + plastic wedge',
+  hemostaticAgent: 'None',
   cureTimeSec: 20,
+  valoPowerCures: false,
   compositeProduct: 'Omnichroma packable',
   desensitizers: ['None'],
   base: 'Flowable composite liner',
+  fieldIsolatedDry: true,
   occlusionAdjusted: true,
   additionalNotes: ''
 }
@@ -551,8 +593,12 @@ export const FILLING_OPTIONS = {
     'Deep (close to pulp)',
     'Near pulp exposure (indirect pulp cap placed)'
   ],
+  isolation: ISOLATION_OPTIONS,
+  prepCleaning: PREP_CLEANING_OPTIONS,
   prepMethod: ['Carbide bur', 'Air abrasion', 'Bur + air abrasion', 'Diamond bur'],
-  etchType: ['37% phosphoric acid', 'Self-etch (no separate acid)'],
+  etchType: ETCH_TYPES,
+  matrixSystem: MATRIX_SYSTEMS,
+  hemostaticAgent: HEMOSTATIC_AGENTS,
   bondingAgent: [
     'Peak Universal Bond (Ultradent)',
     '3M Scotchbond Universal Plus',
@@ -602,9 +648,11 @@ export const CROWN_DEFAULTS = {
   marginDesign: 'Chamfer',
   marginLocation: 'Supragingival',
   retractionCord: 'Single cord, size 000',
+  hemostaticAgent: 'ViscoStat',
   impression: 'PVS, single-step',
   shade: 'A3',
   temporary: 'Bis-acryl with temporary cement',
+  fieldIsolatedDry: true,
   cementation: 'Fuji Evolve RMGI cement',
   cerecScanDevice: 'CEREC Omnicam',
   cerecMill: 'MCXL 4-motor',
@@ -620,6 +668,7 @@ export const CROWN_OPTIONS = {
   marginDesign: ['Chamfer', 'Shoulder', 'Shoulder with bevel', 'Knife-edge'],
   marginLocation: ['Supragingival', 'Equigingival', 'Subgingival'],
   retractionCord: ['Single cord, size 000', 'Single cord, size 00', 'Double cord (000 + 0)', 'No cord (laser troughing)'],
+  hemostaticAgent: HEMOSTATIC_AGENTS,
   impression: ['PVS, single-step', 'PVS, two-step', 'Digital scan (intraoral)', 'Polyether'],
   cementation: [
     'Fuji Evolve RMGI cement',
@@ -665,6 +714,67 @@ export const EXTRACTION_OPTIONS = {
   ],
   graftMaterial: ['Allograft (FDBA)', 'Xenograft (Bio-Oss)', 'Collagen plug only'],
   sutures: ['None', '3-0 chromic gut', '4-0 chromic gut', '4-0 Vicryl', '4-0 silk', '5-0 PTFE']
+}
+
+export const SEALANT_OPTIONS = {
+  material: [
+    'Resin sealant (etch 30s + bonding agent + flowable composite)',
+    'RMGI (resin-modified glass ionomer)',
+    'GI (glass ionomer)'
+  ],
+  isolation: ISOLATION_OPTIONS
+}
+
+export const SEALANT_DEFAULTS = {
+  tooth: '',
+  material: 'Resin sealant (etch 30s + bonding agent + flowable composite)',
+  isolation: 'Isolite',
+  etchTimeEnamel: 30,
+  bondingAgent: 'Peak Universal Bond (Ultradent)',
+  flowableProduct: 'Omnichroma flowable',
+  msdsReviewed: true,
+  cureTimeSec: 20,
+  valoPowerCures: false,
+  fieldIsolatedDry: true,
+  additionalNotes: ''
+}
+
+export const ENDO_OPTIONS = {
+  toothType: ['Anterior', 'Premolar', 'Molar'],
+  irrigation: [
+    'Sodium hypochlorite (NaOCl)',
+    'NaOCl + EDTA',
+    'NaOCl + EDTA + CHX',
+    'Chlorhexidine (CHX)'
+  ],
+  obturation: [
+    'Single-cone with bioceramic sealer',
+    'Gutta-percha, warm vertical condensation',
+    'Gutta-percha, lateral condensation'
+  ],
+  buildupMaterial: ['Composite core', 'RMGI core', 'Amalgam core'],
+  matrixSystem: MATRIX_SYSTEMS
+}
+
+export const ENDO_DEFAULTS = {
+  tooth: '',
+  toothType: 'Molar',
+  isolation: 'Rubber dam',
+  anestheticDrug: 'Septocaine (articaine) 4% with 1:200,000 epi',
+  anestheticCarpules: 2,
+  anestheticTechnique: 'Inferior alveolar nerve block',
+  canals: '',
+  workingLength: 'Apex locator confirmed with periapical radiograph',
+  irrigation: 'NaOCl + EDTA',
+  obturation: 'Single-cone with bioceramic sealer',
+  buildupPlaced: true,
+  buildupMaterial: 'Composite core',
+  matrixSystem: 'V-ring + plastic wedge',
+  cureTimeSec: 20,
+  valoPowerCures: false,
+  fieldIsolatedDry: true,
+  occlusionAdjusted: true,
+  additionalNotes: ''
 }
 
 // ---------------------------------------------------------------------------

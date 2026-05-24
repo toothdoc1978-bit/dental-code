@@ -75,6 +75,40 @@ function desensitizerPhrase(list) {
   return cleaned.length ? `desensitizer(s) placed under restoration: ${cleaned.join(', ')}` : ''
 }
 
+function isInterproximal(surfaces) {
+  return (surfaces || []).some((s) => s === 'M' || s === 'D')
+}
+
+function curingPhrase(p) {
+  if (!p.cureTimeSec) return ''
+  const base = `each increment light-cured for ${p.cureTimeSec} seconds per layer with an Ultradent VALO curing light`
+  return p.valoPowerCures ? `${base}, with additional 4-second high-power cures from multiple angles` : base
+}
+
+function etchPhrase(p) {
+  if (p.etchType === 'No etch / self-adhesive') return 'self-adhesive protocol (no separate phosphoric-acid etch)'
+  if (p.etchType === 'Selective etch (enamel only)') return `selective etch — enamel only with 37% phosphoric acid for ${p.etchTimeEnamel ?? 30}s`
+  return `${p.etchType} — enamel ${p.etchTimeEnamel ?? 30}s, dentin ${p.etchTimeDentin ?? 15}s`
+}
+
+function cleaningPhrase(p) {
+  return p.prepCleaning ? `preparation cleaned with ${p.prepCleaning} followed by a thorough distilled-water rinse` : ''
+}
+
+function dryFieldPhrase(p) {
+  return p.fieldIsolatedDry ? 'the field/preparation was isolated and maintained dry throughout' : ''
+}
+
+function contactPhrase(surfaces) {
+  return isInterproximal(surfaces)
+    ? 'proximal contact with the adjacent tooth was verified (floss passed with appropriate resistance) and marginal ridge contour confirmed'
+    : ''
+}
+
+function hemostasisPhrase(p) {
+  return p.hemostaticAgent && p.hemostaticAgent !== 'None' ? `hemostasis achieved with ${p.hemostaticAgent}` : ''
+}
+
 function buildProcedures(st) {
   if (!st || !st.procedures?.length) return ''
   return st.procedures
@@ -88,23 +122,73 @@ function buildProcedures(st) {
           `decay depth: ${p.decayDepth}`,
           anesthesiaPhrase(p),
           `isolation: ${p.isolation}`,
-          `prep: ${p.prepMethod}`
+          cleaningPhrase(p),
+          `prep: ${p.prepMethod}`,
+          hemostasisPhrase(p),
+          isInterproximal(p.surfaces) && p.matrixSystem ? `matrix system: ${p.matrixSystem}` : ''
         ]
         if (isAmalgam) {
           const d = desensitizerPhrase(p.desensitizers)
           if (d) fields.push(d)
         } else {
-          fields.push(`etch: ${p.etchType} for ${p.etchTimeEnamel}s enamel and ${p.etchTimeDentin}s dentin`)
+          fields.push(`adhesive: ${etchPhrase(p)}`)
           fields.push(`bonding agent: ${p.bondingAgent}${p.msdsReviewed ? ' (applied per MSDS)' : ''}`)
-          fields.push(`light-cured ${p.cureTimeSec}s per layer`)
           if (isComposite && p.compositeProduct) {
-            fields.push(`restorative material placed: ${p.compositeProduct}, light-cured per manufacturer instructions`)
+            fields.push(`restorative material placed: ${p.compositeProduct}`)
           }
+          const cure = curingPhrase(p)
+          if (cure) fields.push(cure)
         }
         fields.push(`base/liner: ${p.base}`)
         fields.push(p.occlusionAdjusted ? 'occlusion checked and adjusted with articulating paper' : 'occlusion not adjusted')
+        const contact = contactPhrase(p.surfaces)
+        if (contact) fields.push(contact)
+        const dry = dryFieldPhrase(p)
+        if (dry) fields.push(dry)
         if (p.additionalNotes) fields.push(`notes: ${p.additionalNotes}`)
         return `Procedure ${i + 1} — Filling ${tooth}: ${fields.filter(Boolean).join('; ')}`
+      }
+      if (p.type === 'sealant') {
+        const isResin = (p.material || '').startsWith('Resin')
+        const fields = [
+          `${p.material} placed on ${tooth}`,
+          `isolation: ${p.isolation}`
+        ]
+        if (isResin) {
+          fields.push(`enamel etched with 37% phosphoric acid for ${p.etchTimeEnamel ?? 30}s, then rinsed and dried`)
+          fields.push(`bonding agent: ${p.bondingAgent}${p.msdsReviewed ? ' (applied per MSDS)' : ''}`)
+          if (p.flowableProduct) fields.push(`flowable composite: ${p.flowableProduct}`)
+          const cure = curingPhrase(p)
+          if (cure) fields.push(cure)
+        } else {
+          fields.push('placed per manufacturer instructions')
+        }
+        const dry = dryFieldPhrase(p)
+        if (dry) fields.push(dry)
+        if (p.additionalNotes) fields.push(`notes: ${p.additionalNotes}`)
+        return `Procedure ${i + 1} — Sealant ${tooth}: ${fields.filter(Boolean).join('; ')}`
+      }
+      if (p.type === 'endo') {
+        const fields = [
+          `${(p.toothType || '').toLowerCase()} endodontic therapy on ${tooth}`.trim(),
+          anesthesiaPhrase(p),
+          `isolation: ${p.isolation || 'rubber dam'}`,
+          p.canals ? `canals located/treated: ${p.canals}` : '',
+          p.workingLength ? `working length: ${p.workingLength}` : '',
+          p.irrigation ? `irrigation: ${p.irrigation}` : '',
+          p.obturation ? `obturation: ${p.obturation}` : ''
+        ]
+        if (p.buildupPlaced) {
+          fields.push(`post-endodontic core build-up placed (${p.buildupMaterial || 'composite core'})`)
+          if (p.matrixSystem) fields.push(`matrix system: ${p.matrixSystem}`)
+          const cure = curingPhrase(p)
+          if (cure) fields.push(cure)
+          if (p.occlusionAdjusted) fields.push('occlusion checked and adjusted with articulating paper')
+        }
+        const dry = dryFieldPhrase(p)
+        if (dry) fields.push(dry)
+        if (p.additionalNotes) fields.push(`notes: ${p.additionalNotes}`)
+        return `Procedure ${i + 1} — Endodontic therapy ${tooth}: ${fields.filter(Boolean).join('; ')}`
       }
       if (p.type === 'crown') {
         const apt = p.appointmentType || 'Prep (lab case)'
@@ -132,6 +216,7 @@ function buildProcedures(st) {
           fields = [
             `same-day CEREC ${p.crownType} crown delivered on ${tooth}${vitalDetail ? ` (${vitalDetail})` : ''}`,
             anesthesiaPhrase(p),
+            hemostasisPhrase(p),
             `digital impression captured with ${p.cerecScanDevice}`,
             `crown milled on ${p.cerecMill}`,
             showCrystallization ? `crystallization/sintering: ${p.cerecCrystallization}` : '',
@@ -148,11 +233,14 @@ function buildProcedures(st) {
             `reduction: ${p.reduction}`,
             `margin: ${p.marginDesign}, ${p.marginLocation}`,
             `retraction: ${p.retractionCord}`,
+            hemostasisPhrase(p),
             `impression: ${p.impression}`,
             `shade: ${p.shade}`,
             `temporary: ${p.temporary}`
           ]
         }
+        const dry = dryFieldPhrase(p)
+        if (dry && !isSeat) fields.push(dry)
         if (p.additionalNotes) fields.push(`notes: ${p.additionalNotes}`)
         return `Procedure ${i + 1} — Crown ${apt} on ${tooth}: ${fields.filter(Boolean).join('; ')}`
       }
@@ -363,7 +451,7 @@ function buildPostOpBlock(treatmentRendered, scheduledTreatment) {
 function hasClosingDocProcedure(treatmentRendered, scheduledTreatment) {
   const rendered = (treatmentRendered || []).some((t) => t.cdtCode && /^D[2356]/.test(t.cdtCode))
   const scheduled = (scheduledTreatment?.procedures || []).some(
-    (p) => p.type === 'filling' || p.type === 'crown'
+    (p) => p.type === 'filling' || p.type === 'crown' || p.type === 'endo'
   )
   return rendered || scheduled
 }
