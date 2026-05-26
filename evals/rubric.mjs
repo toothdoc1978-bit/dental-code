@@ -28,6 +28,33 @@ function hasCatchAll(chart) {
   return (chart.radiographs?.taken || []).some((t) => (t.panoIndications || []).includes('alara-retake'))
 }
 
+function scheduledProcs(chart) {
+  return chart.scheduledTreatment?.procedures || []
+}
+
+function hasType(chart, type) {
+  return scheduledProcs(chart).some((p) => p.type === type)
+}
+
+// Resin work that requires an etch/adhesive step (excludes self-adhesive fillings and GI/RMGI sealants).
+function hasResinEtchWork(chart) {
+  return scheduledProcs(chart).some(
+    (p) =>
+      (p.type === 'filling' && p.material !== 'Amalgam' && p.etchType !== 'No etch / self-adhesive') ||
+      (p.type === 'sealant' && (p.material || '').startsWith('Resin'))
+  )
+}
+
+// Any light-cured resin procedure (filling, resin sealant, or endo with a build-up).
+function hasLightCuredResin(chart) {
+  return scheduledProcs(chart).some(
+    (p) =>
+      (p.type === 'filling' && p.material !== 'Amalgam') ||
+      (p.type === 'sealant' && (p.material || '').startsWith('Resin')) ||
+      (p.type === 'endo' && p.buildupPlaced)
+  )
+}
+
 export const RUBRIC = [
   {
     name: 'soap_structure',
@@ -168,6 +195,74 @@ export const RUBRIC = [
       m(note, /(post-operative instructions|prognosis was discussed|verbalized understanding)/i)
         ? { status: 'fail', detail: 'post-op/closing language on a non-operative visit' }
         : { status: 'pass', detail: 'correctly omits post-op language' }
+  },
+  {
+    name: 'isolation_documented',
+    why: 'Fillings, sealants, and endodontic therapy must document the isolation method.',
+    applies: (c) => scheduledProcs(c).some((p) => ['filling', 'sealant', 'endo'].includes(p.type)),
+    evaluate: (note) =>
+      m(note, /(isolat|isolite|rubber dam|cotton roll|dri-?angle)/i)
+        ? { status: 'pass', detail: 'isolation method documented' }
+        : { status: 'fail', detail: 'no isolation method mentioned' }
+  },
+  {
+    name: 'dry_field',
+    why: 'Procedures flagged as isolated should confirm the field/prep was kept dry.',
+    applies: (c) => scheduledProcs(c).some((p) => p.fieldIsolatedDry),
+    evaluate: (note) =>
+      m(note, /(kept dry|maintained dry|moisture control|(?:field|isolat\w*|preparation)[^.]{0,30}dry|dry[^.]{0,30}(?:field|throughout))/i)
+        ? { status: 'pass', detail: 'dry-field statement present' }
+        : { status: 'fail', detail: 'no dry-field confirmation' }
+  },
+  {
+    name: 'valo_curing',
+    why: 'Light-cured resin procedures should document Ultradent VALO curing.',
+    applies: (c) => hasLightCuredResin(c),
+    evaluate: (note) => {
+      if (m(note, /VALO/i)) return { status: 'pass', detail: 'VALO curing documented' }
+      if (m(note, /light-cur|cured/i)) return { status: 'warn', detail: 'curing mentioned but VALO not named' }
+      return { status: 'fail', detail: 'no curing/VALO documented' }
+    }
+  },
+  {
+    name: 'interproximal_contact',
+    why: 'Interproximal (M/D) restorations must confirm contact with the adjacent tooth.',
+    applies: (c) => scheduledProcs(c).some((p) => p.type === 'filling' && (p.surfaces || []).some((s) => s === 'M' || s === 'D')),
+    evaluate: (note) =>
+      m(note, /((proximal|interproximal) contact|contact[^.]{0,25}adjacent|adjacent tooth|marginal ridge)/i)
+        ? { status: 'pass', detail: 'proximal contact confirmed' }
+        : { status: 'fail', detail: 'no proximal-contact confirmation for an interproximal restoration' }
+  },
+  {
+    name: 'etch_protocol',
+    why: 'Resin work documents an etch/adhesive step; self-adhesive must not fabricate phosphoric-acid etching.',
+    applies: (c) => scheduledProcs(c).some((p) => (p.type === 'filling' && p.material !== 'Amalgam') || (p.type === 'sealant' && (p.material || '').startsWith('Resin'))),
+    evaluate: (note, c) => {
+      if (!hasResinEtchWork(c)) {
+        // The only resin work present is self-adhesive — no phosphoric-acid etch should be described.
+        return m(note, /(phosphoric acid|total-etch|selective-etch)/i)
+          ? { status: 'fail', detail: 'self-adhesive case but note describes phosphoric-acid etching' }
+          : { status: 'pass', detail: 'correctly omits etch for self-adhesive work' }
+      }
+      return m(note, /etch/i) && m(note, /(phosphoric|adhesive)/i)
+        ? { status: 'pass', detail: 'etch/adhesive protocol documented' }
+        : { status: 'fail', detail: 'no etch/adhesive protocol documented' }
+    }
+  },
+  {
+    name: 'endo_protocol',
+    why: 'Endodontic therapy must document working length and obturation under rubber-dam isolation.',
+    applies: (c) => hasType(c, 'endo'),
+    evaluate: (note) => {
+      const miss = [
+        !m(note, /(working length|apex locator)/i) && 'working length',
+        !m(note, /(obturat|gutta|bioceramic|single-cone)/i) && 'obturation',
+        !m(note, /rubber dam/i) && 'rubber dam'
+      ].filter(Boolean)
+      return miss.length
+        ? { status: 'fail', detail: `endo missing: ${miss.join(', ')}` }
+        : { status: 'pass', detail: 'working length + obturation + rubber dam documented' }
+    }
   }
 ]
 
