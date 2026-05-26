@@ -131,5 +131,44 @@ export const SEED_CASES = [
       treatmentPlan: [{ cdtCode: 'D4910', description: 'Periodontal maintenance', priority: 'soon' }],
       patientEducation: ['Flossing/interdental cleaning'], signedConsents: ['general', 'local_anesthesia']
     }
+  },
+  {
+    name: 'seed: scheduled MO composite (interproximal contact + matrix + VALO)',
+    chart: {
+      visitSetup: { patientType: 'adult', visitType: 'scheduled', visitDate: '2026-05-24', age: 44, provider: 'Dr. Garner' },
+      medicalHistory: { changesSinceLastVisit: false, allergies: ['NKA'] },
+      scheduledTreatment: {
+        procedures: [{
+          id: 'p1', type: 'filling', tooth: '19', material: 'Composite', surfaces: ['M', 'O'],
+          decayDepth: 'Moderate (into dentin)', anestheticDrug: 'Septocaine (articaine) 4% with 1:200,000 epi',
+          anestheticCarpules: 1, anestheticTechnique: 'Infiltration',
+          isolation: 'Isolite', prepCleaning: 'Consepsis Scrub', prepMethod: 'Carbide bur',
+          etchType: '37% phosphoric acid', etchTimeEnamel: 30, etchTimeDentin: 15,
+          bondingAgent: 'Peak Universal Bond (Ultradent)', msdsReviewed: true,
+          matrixSystem: 'V-ring + plastic wedge', hemostaticAgent: 'None',
+          cureTimeSec: 20, valoPowerCures: true, compositeProduct: 'Omnichroma packable',
+          base: 'Flowable composite liner', fieldIsolatedDry: true, occlusionAdjusted: true, additionalNotes: ''
+        }]
+      },
+      signedConsents: ['general', 'local_anesthesia']
+    }
+  },
+  {
+    name: 'seed: scheduled molar endo + build-up (isolation, working length, obturation, matrix)',
+    chart: {
+      visitSetup: { patientType: 'adult', visitType: 'scheduled', visitDate: '2026-05-24', age: 52, provider: 'Dr. Garner' },
+      medicalHistory: { changesSinceLastVisit: false, allergies: ['NKA'] },
+      scheduledTreatment: {
+        procedures: [{
+          id: 'e1', type: 'endo', tooth: '30', toothType: 'Molar', isolation: 'Rubber dam',
+          anestheticDrug: 'Septocaine (articaine) 4% with 1:200,000 epi', anestheticCarpules: 2, anestheticTechnique: 'Inferior alveolar nerve block',
+          canals: 'MB, ML, DB, DL (4)', workingLength: 'Apex locator confirmed with periapical radiograph',
+          irrigation: 'NaOCl + EDTA', obturation: 'Single-cone with bioceramic sealer',
+          buildupPlaced: true, buildupMaterial: 'Composite core', matrixSystem: 'V-ring + plastic wedge',
+          cureTimeSec: 20, valoPowerCures: false, fieldIsolatedDry: true, occlusionAdjusted: true, additionalNotes: ''
+        }]
+      },
+      signedConsents: ['general', 'endo', 'local_anesthesia']
+    }
   }
 ]
