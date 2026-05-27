@@ -1014,3 +1014,49 @@ export function diagnosisIcdMismatch(treatmentRendered, diagnoses) {
   }
   return issues
 }
+
+// CDT pairs that cannot be billed together on one encounter (hard), or that
+// warrant a same-tooth/quadrant verification (caution).
+export const CDT_CONFLICTS = {
+  hard: [
+    { pair: ['D0120', 'D0150'], message: 'D0120 (periodic exam) and D0150 (comprehensive exam) cannot both be billed on the same encounter.' },
+    { pair: ['D1110', 'D1120'], message: 'D1110 (adult prophylaxis) and D1120 (child prophylaxis) cannot both be billed for the same patient.' }
+  ],
+  caution: [
+    { pair: ['D7140', 'D7210'], message: 'D7140 (simple) and D7210 (surgical) extraction on one encounter — confirm they are for different teeth.' },
+    { pair: ['D1110', 'D4341'], message: 'Prophylaxis (D1110) and SRP (D4341) same day — confirm different quadrants; same-quadrant is commonly denied.' },
+    { pair: ['D1120', 'D4341'], message: 'Prophylaxis (D1120) and SRP (D4341) same day — confirm different quadrants.' },
+    { pair: ['D1110', 'D4342'], message: 'Prophylaxis (D1110) and SRP (D4342) same day — confirm different quadrants.' },
+    { pair: ['D1120', 'D4342'], message: 'Prophylaxis (D1120) and SRP (D4342) same day — confirm different quadrants.' },
+    { pair: ['D1110', 'D4910'], message: 'Prophylaxis (D1110) and periodontal maintenance (D4910) are generally not billable together.' },
+    { pair: ['D1120', 'D4910'], message: 'Prophylaxis (D1120) and periodontal maintenance (D4910) are generally not billable together.' }
+  ]
+}
+
+// Scans a list of CDT codes (order-independent) for conflicting pairs.
+// Returns [{ severity: 'error'|'warn', codes: [a, b], message }].
+export function detectCdtConflicts(codes) {
+  const present = new Set((codes || []).filter(Boolean).map((c) => c.toUpperCase()))
+  const out = []
+  const scan = (list, severity) => {
+    for (const { pair, message } of list) {
+      if (present.has(pair[0]) && present.has(pair[1])) out.push({ severity, codes: pair, message })
+    }
+  }
+  scan(CDT_CONFLICTS.hard, 'error')
+  scan(CDT_CONFLICTS.caution, 'warn')
+  return out
+}
+
+// Advisory documentation reminders for high-audit-risk codes when present.
+const CATEGORY_DOC_REMINDERS = {
+  D9230: 'Nitrous oxide (D9230): document indication, monitoring, duration, and return to baseline.',
+  D7210: 'Surgical extraction (D7210): document surgical complexity — flap, bone removal, and/or sectioning.'
+}
+
+export function categoryDocReminders(codes) {
+  const present = new Set((codes || []).filter(Boolean).map((c) => c.toUpperCase()))
+  return Object.entries(CATEGORY_DOC_REMINDERS)
+    .filter(([code]) => present.has(code))
+    .map(([code, message]) => ({ code, message }))
+}

@@ -4,7 +4,9 @@ import {
   derivedRequiredConsents,
   lookupCrosswalk,
   validateTreatmentCoding,
-  diagnosisIcdMismatch
+  diagnosisIcdMismatch,
+  detectCdtConflicts,
+  categoryDocReminders
 } from '../data/examDefaults.js'
 
 // Each check returns {status: 'pass'|'fail'|'warn', label, detail?}.
@@ -97,6 +99,34 @@ function runChecks(state) {
         label: 'Coding — diagnoses align with rendered procedure codes',
         status: 'warn',
         detail: dxIssues.map((i) => i.message).join(' • ')
+      })
+    }
+  }
+
+  // CDT conflict detection + high-audit documentation reminders
+  const allCodes = [...rendered.map((t) => t.cdtCode), ...(state.treatmentPlan || []).map((t) => t.cdtCode)].filter(Boolean)
+  if (allCodes.length) {
+    const conflicts = detectCdtConflicts(allCodes)
+    const hardConflicts = conflicts.filter((c) => c.severity === 'error')
+    const cautionConflicts = conflicts.filter((c) => c.severity === 'warn')
+    checks.push({
+      label: 'Coding — no conflicting CDT codes on this encounter',
+      status: hardConflicts.length ? 'fail' : 'pass',
+      detail: hardConflicts.length ? hardConflicts.map((c) => c.message).join(' • ') : ''
+    })
+    if (cautionConflicts.length) {
+      checks.push({
+        label: 'Coding — CDT combinations to verify',
+        status: 'warn',
+        detail: cautionConflicts.map((c) => c.message).join(' • ')
+      })
+    }
+    const reminders = categoryDocReminders(allCodes)
+    if (reminders.length) {
+      checks.push({
+        label: 'Coding — high-audit procedure documentation reminders',
+        status: 'warn',
+        detail: reminders.map((rem) => rem.message).join(' • ')
       })
     }
   }
