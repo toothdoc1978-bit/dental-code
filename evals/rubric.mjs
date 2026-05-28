@@ -207,12 +207,15 @@ export const RUBRIC = [
   },
   {
     name: 'dry_field',
-    why: 'Procedures flagged as isolated should confirm the field/prep was kept dry.',
+    why: 'Procedures flagged as isolated should attest the field was kept dry / isolation maintained throughout. Accepts the dryness/moisture vocabulary OR maintained-isolation phrasing (clinically equivalent), but not a bare "isolation placed" with no maintenance.',
     applies: (c) => scheduledProcs(c).some((p) => p.fieldIsolatedDry),
     evaluate: (note) =>
-      m(note, /(kept dry|maintained dry|moisture control|(?:field|isolat\w*|preparation)[^.]{0,30}dry|dry[^.]{0,30}(?:field|throughout))/i)
-        ? { status: 'pass', detail: 'dry-field statement present' }
-        : { status: 'fail', detail: 'no dry-field confirmation' }
+      m(
+        note,
+        /(kept dry|maintained dry|moisture control|dry field|dry and controlled|free of (salivary|saliva|moisture)|moisture[ -]?free|saliva[ -]?free|dry[,\s][^.]{0,40}(?:field|environment|operative|throughout)|(?:field|isolat\w*|preparation)[^.]{0,40}dry|isolat\w*[^.]{0,60}(?:maintained|throughout|sustained)|(?:maintained|sustained)[^.]{0,40}isolat)/i
+      )
+        ? { status: 'pass', detail: 'dry-field / maintained-isolation attestation present' }
+        : { status: 'fail', detail: 'no dry-field or maintained-isolation confirmation' }
   },
   {
     name: 'valo_curing',

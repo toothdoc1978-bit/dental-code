@@ -504,13 +504,11 @@ function CrownForm({ proc, update }) {
         )}
         {isCerec && <CerecBlock proc={proc} update={update} />}
       </div>
-      {(isPrep || isCerec) && (
-        <div className="flex flex-wrap gap-3 mt-2">
-          <CheckChip active={proc.fieldIsolatedDry} onClick={() => update('fieldIsolatedDry', !proc.fieldIsolatedDry)}>
-            Field/prep isolated and kept dry
-          </CheckChip>
-        </div>
-      )}
+      <div className="flex flex-wrap gap-3 mt-2">
+        <CheckChip active={proc.fieldIsolatedDry} onClick={() => update('fieldIsolatedDry', !proc.fieldIsolatedDry)}>
+          Field isolated and kept dry
+        </CheckChip>
+      </div>
       <Field label="Additional details">
         <TextArea value={proc.additionalNotes} onChange={(v) => update('additionalNotes', v)} />
       </Field>

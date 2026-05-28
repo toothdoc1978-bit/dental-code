@@ -96,7 +96,9 @@ function cleaningPhrase(p) {
 }
 
 function dryFieldPhrase(p) {
-  return p.fieldIsolatedDry ? 'the field/preparation was isolated and maintained dry throughout' : ''
+  return p.fieldIsolatedDry
+    ? 'the operative field was isolated and kept dry, free of salivary/moisture contamination, throughout the procedure'
+    : ''
 }
 
 function contactPhrase(surfaces) {
@@ -240,7 +242,7 @@ function buildProcedures(st) {
           ]
         }
         const dry = dryFieldPhrase(p)
-        if (dry && !isSeat) fields.push(dry)
+        if (dry) fields.push(dry)
         if (p.additionalNotes) fields.push(`notes: ${p.additionalNotes}`)
         return `Procedure ${i + 1} — Crown ${apt} on ${tooth}: ${fields.filter(Boolean).join('; ')}`
       }
@@ -614,7 +616,11 @@ export async function generateNote(rawData) {
     model: 'claude-sonnet-4-6',
     max_tokens: 1024,
     temperature: 1,
-    system: SYSTEM_PROMPT,
+    // The system prompt is byte-identical on every call, so mark it cacheable.
+    // Repeat generations within the cache window read the ~3.7K-token prefix at
+    // ~0.1x cost and lower latency. The per-request user prompt stays uncached
+    // (it renders after the system block), so output is unchanged.
+    system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: userPrompt }]
   })
 

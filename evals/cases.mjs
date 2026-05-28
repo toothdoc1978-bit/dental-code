@@ -170,5 +170,1244 @@ export const SEED_CASES = [
       },
       signedConsents: ['general', 'endo', 'local_anesthesia']
     }
+  },
+  {
+    "name": "seed b2-01: new-patient comprehensive, healthy adult, FMX",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "comprehensive",
+        "visitDate": "2026-05-28",
+        "age": 31
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "recall"
+      },
+      "softTissue": {
+        "lips": "wnl",
+        "tongue": "wnl",
+        "gingiva": "wnl"
+      },
+      "toothChart": {},
+      "dentitionType": "permanent",
+      "perio": {
+        "periodontiumType": "Periodontally Healthy",
+        "bop": "None",
+        "pocketDepthRange": "1–3 mm (WNL)",
+        "ohStatus": "Good"
+      },
+      "occlusion": {
+        "molarClassR": "I",
+        "molarClassL": "I"
+      },
+      "radiographs": {
+        "none": false,
+        "taken": [
+          {
+            "type": "Full Mouth Series",
+            "reason": "New patient comprehensive evaluation",
+            "panoIndications": []
+          }
+        ],
+        "findings": [
+          "No significant findings"
+        ]
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D0150",
+          "description": "Comprehensive oral evaluation",
+          "teeth": [],
+          "surfaces": []
+        },
+        {
+          "cdtCode": "D1110",
+          "description": "Prophylaxis - adult",
+          "teeth": [],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [],
+      "treatmentPlan": [],
+      "patientEducation": [
+        "Flossing/interdental cleaning"
+      ],
+      "signedConsents": []
+    }
+  },
+  {
+    "name": "seed b2-02: anterior composite D2330 (self-adhesive, no etch fabrication)",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-28",
+        "age": 27,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "scheduledTreatment": {
+        "procedures": [
+          {
+            "id": "p1",
+            "type": "filling",
+            "tooth": "8",
+            "material": "Composite",
+            "surfaces": [
+              "F"
+            ],
+            "decayDepth": "Superficial (enamel only)",
+            "anestheticDrug": "Septocaine (articaine) 4% with 1:200,000 epi",
+            "anestheticCarpules": 0.5,
+            "anestheticTechnique": "Infiltration",
+            "isolation": "Cotton rolls / DriAngle",
+            "prepCleaning": "Air/water",
+            "prepMethod": "Diamond bur",
+            "etchType": "No etch / self-adhesive",
+            "bondingAgent": "3M Scotchbond Universal Plus",
+            "msdsReviewed": true,
+            "hemostaticAgent": "None",
+            "cureTimeSec": 20,
+            "valoPowerCures": false,
+            "compositeProduct": "3M Filtek Supreme",
+            "base": "None",
+            "fieldIsolatedDry": true,
+            "occlusionAdjusted": true,
+            "additionalNotes": ""
+          }
+        ]
+      },
+      "signedConsents": [
+        "general",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-03: amalgam D2150 two-surface posterior",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-28",
+        "age": 58,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "scheduledTreatment": {
+        "procedures": [
+          {
+            "id": "p1",
+            "type": "filling",
+            "tooth": "31",
+            "material": "Amalgam",
+            "surfaces": [
+              "M",
+              "O"
+            ],
+            "decayDepth": "Moderate (into dentin)",
+            "anestheticDrug": "Lidocaine 2% with 1:100,000 epi",
+            "anestheticCarpules": 1,
+            "anestheticTechnique": "Inferior alveolar nerve block",
+            "isolation": "Rubber dam",
+            "prepCleaning": "IPA (isopropyl alcohol)",
+            "prepMethod": "Carbide bur",
+            "matrixSystem": "Disposable Tofflemire + wooden wedge",
+            "hemostaticAgent": "None",
+            "desensitizers": [
+              "Dycal (Ca(OH)₂)"
+            ],
+            "base": "RMGI base",
+            "fieldIsolatedDry": true,
+            "occlusionAdjusted": true,
+            "additionalNotes": ""
+          }
+        ]
+      },
+      "signedConsents": [
+        "general",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-04: 3-surface posterior composite D2393",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-28",
+        "age": 49,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "scheduledTreatment": {
+        "procedures": [
+          {
+            "id": "p1",
+            "type": "filling",
+            "tooth": "4",
+            "material": "Composite",
+            "surfaces": [
+              "M",
+              "O",
+              "D"
+            ],
+            "decayDepth": "Deep (close to pulp)",
+            "anestheticDrug": "Septocaine (articaine) 4% with 1:200,000 epi",
+            "anestheticCarpules": 1,
+            "anestheticTechnique": "Infiltration",
+            "isolation": "Isolite",
+            "prepCleaning": "Consepsis Scrub",
+            "prepMethod": "Carbide bur",
+            "etchType": "Selective etch (enamel only)",
+            "etchTimeEnamel": 30,
+            "bondingAgent": "Peak Universal Bond (Ultradent)",
+            "msdsReviewed": true,
+            "matrixSystem": "V-ring + plastic wedge",
+            "hemostaticAgent": "None",
+            "cureTimeSec": 20,
+            "valoPowerCures": true,
+            "compositeProduct": "Omnichroma packable",
+            "base": "Calcium hydroxide (Dycal)",
+            "fieldIsolatedDry": true,
+            "occlusionAdjusted": true,
+            "additionalNotes": ""
+          }
+        ]
+      },
+      "signedConsents": [
+        "general",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-05: GI sealant D1351 on child",
+    "chart": {
+      "visitSetup": {
+        "patientType": "child",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-28",
+        "age": 9,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "scheduledTreatment": {
+        "procedures": [
+          {
+            "id": "s1",
+            "type": "sealant",
+            "tooth": "19",
+            "material": "GI (glass ionomer)",
+            "isolation": "Cotton rolls / DriAngle",
+            "fieldIsolatedDry": true,
+            "additionalNotes": ""
+          }
+        ]
+      },
+      "signedConsents": [
+        "general"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-06: crown seat (lab case delivery) D2740",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-28",
+        "age": 63,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "scheduledTreatment": {
+        "procedures": [
+          {
+            "id": "c1",
+            "type": "crown",
+            "tooth": "14",
+            "appointmentType": "Seat (lab case delivery)",
+            "crownType": "Zirconia (monolithic)",
+            "anestheticDrug": "Septocaine (articaine) 4% with 1:200,000 epi",
+            "anestheticCarpules": 1,
+            "anestheticTechnique": "Infiltration",
+            "cementation": "Fuji Evolve RMGI cement",
+            "fieldIsolatedDry": true,
+            "additionalNotes": ""
+          }
+        ]
+      },
+      "signedConsents": [
+        "general",
+        "crown",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-07: anterior endo D3310 + build-up",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-28",
+        "age": 34,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "scheduledTreatment": {
+        "procedures": [
+          {
+            "id": "e1",
+            "type": "endo",
+            "tooth": "9",
+            "toothType": "Anterior",
+            "isolation": "Rubber dam",
+            "anestheticDrug": "Septocaine (articaine) 4% with 1:200,000 epi",
+            "anestheticCarpules": 1,
+            "anestheticTechnique": "Infiltration",
+            "canals": "single canal",
+            "workingLength": "Apex locator confirmed with periapical radiograph",
+            "irrigation": "NaOCl + EDTA",
+            "obturation": "Gutta-percha, warm vertical condensation",
+            "buildupPlaced": true,
+            "buildupMaterial": "Composite core",
+            "matrixSystem": "Mylar strip + wooden wedge",
+            "cureTimeSec": 20,
+            "valoPowerCures": false,
+            "fieldIsolatedDry": true,
+            "occlusionAdjusted": true,
+            "additionalNotes": ""
+          }
+        ]
+      },
+      "signedConsents": [
+        "general",
+        "endo",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-08: surgical extraction D7210 with sectioning",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "comprehensive",
+        "visitDate": "2026-05-28",
+        "age": 41
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "pain",
+        "location": "LL",
+        "severity": 7,
+        "character": [
+          "throbbing"
+        ]
+      },
+      "softTissue": {
+        "lips": "wnl"
+      },
+      "toothChart": {
+        "17": {
+          "conditions": [
+            "non-restorable caries",
+            "fracture"
+          ],
+          "surfaces": []
+        }
+      },
+      "dentitionType": "permanent",
+      "perio": {},
+      "occlusion": {},
+      "radiographs": {
+        "none": false,
+        "taken": [
+          {
+            "type": "Panoramic",
+            "reason": "Pre-extraction evaluation of impacted third molar",
+            "panoIndications": []
+          }
+        ],
+        "findings": [
+          "Impacted teeth"
+        ]
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D7210",
+          "description": "Surgical extraction - erupted tooth",
+          "teeth": [
+            "17"
+          ],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [
+        "K01.1 — Impacted teeth"
+      ],
+      "treatmentPlan": [],
+      "patientEducation": [],
+      "signedConsents": [
+        "general",
+        "extraction",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-09: perio maintenance D4910",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "periodic",
+        "visitDate": "2026-05-28",
+        "age": 60
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "conditions": [
+          "Diabetes"
+        ],
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "recall"
+      },
+      "softTissue": {
+        "gingiva": "Localized erythema"
+      },
+      "toothChart": {},
+      "dentitionType": "permanent",
+      "perio": {
+        "periodontiumType": "Periodontitis Stage III",
+        "bop": "Localized (<30%)",
+        "pocketDepthRange": "4–5 mm",
+        "calculus": "Subgingival present",
+        "ohStatus": "Fair",
+        "fullChartDone": true
+      },
+      "occlusion": {},
+      "radiographs": {
+        "none": false,
+        "taken": [
+          {
+            "type": "BWX (4 films)",
+            "reason": "Periodontal monitoring",
+            "panoIndications": []
+          }
+        ],
+        "findings": [
+          "Horizontal bone loss"
+        ]
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D4910",
+          "description": "Periodontal maintenance",
+          "teeth": [],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [
+        "K05.321 — Chronic periodontitis generalized slight"
+      ],
+      "treatmentPlan": [],
+      "patientEducation": [
+        "Flossing/interdental cleaning"
+      ],
+      "signedConsents": [
+        "general"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-10: palliative D9110 emergency, no operative",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "emergency",
+        "visitDate": "2026-05-28",
+        "age": 45
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "Penicillin"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "pain",
+        "location": "UR",
+        "severity": 8,
+        "character": [
+          "spontaneous",
+          "lingers"
+        ]
+      },
+      "softTissue": {
+        "lips": "wnl"
+      },
+      "toothChart": {
+        "3": {
+          "conditions": [
+            "deep caries"
+          ],
+          "surfaces": [
+            "O"
+          ]
+        }
+      },
+      "dentitionType": "permanent",
+      "perio": {},
+      "occlusion": {},
+      "radiographs": {
+        "none": false,
+        "taken": [
+          {
+            "type": "Periapical",
+            "reason": "Pain in upper-right quadrant",
+            "panoIndications": []
+          }
+        ],
+        "findings": [
+          "Periapical pathology"
+        ]
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D9110",
+          "description": "Palliative treatment",
+          "teeth": [
+            "3"
+          ],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [
+        "K04.02 — Irreversible pulpitis"
+      ],
+      "treatmentPlan": [
+        {
+          "cdtCode": "D3330",
+          "description": "Endodontic therapy - molar",
+          "teeth": [
+            "3"
+          ],
+          "priority": "urgent"
+        }
+      ],
+      "patientEducation": [],
+      "signedConsents": [
+        "general"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-11: EPSDT toddler age 2, SDF + varnish, high risk",
+    "chart": {
+      "visitSetup": {
+        "patientType": "epsdt",
+        "visitType": "comprehensive",
+        "visitDate": "2026-05-28",
+        "age": 2
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "recall"
+      },
+      "epsdtScreening": {
+        "developmentWNL": true,
+        "waterSource": "Well/Non-fluoridated",
+        "supplementalFluoride": [
+          "Systemic drops/tablets"
+        ],
+        "cariesRisk": "high",
+        "riskFactors": [
+          "Active caries / cavitated lesions",
+          "Sugar-sweetened / acidic beverages",
+          "Inadequate fluoride exposure"
+        ],
+        "counselingTopics": [
+          "Brushing technique",
+          "Diet/sugar reduction",
+          "Sippy cup/bottle use"
+        ],
+        "referralsNeeded": []
+      },
+      "softTissue": {
+        "lips": "wnl"
+      },
+      "toothChart": {
+        "K": {
+          "conditions": [
+            "arrested caries"
+          ],
+          "surfaces": [
+            "O"
+          ]
+        }
+      },
+      "dentitionType": "primary",
+      "perio": {
+        "pediatricVisualExam": true,
+        "periodontiumType": "Periodontally Healthy",
+        "ohStatus": "Fair"
+      },
+      "occlusion": {},
+      "radiographs": {
+        "none": true,
+        "taken": []
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D1354",
+          "description": "SDF application per tooth",
+          "teeth": [
+            "K"
+          ],
+          "surfaces": []
+        },
+        {
+          "cdtCode": "D1206",
+          "description": "Topical fluoride varnish",
+          "teeth": [],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [
+        "K02.3 — Arrested caries"
+      ],
+      "treatmentPlan": [],
+      "patientEducation": [
+        "Early childhood caries prevention",
+        "Bottle/sippy cup weaning"
+      ],
+      "signedConsents": [
+        "general",
+        "sdf"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-12: EPSDT age 11 mixed dentition, pediatric visual perio",
+    "chart": {
+      "visitSetup": {
+        "patientType": "epsdt",
+        "visitType": "periodic",
+        "visitDate": "2026-05-28",
+        "age": 11
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "recall"
+      },
+      "epsdtScreening": {
+        "developmentWNL": true,
+        "waterSource": "Fluoridated Municipal",
+        "supplementalFluoride": [
+          "Fluoride toothpaste"
+        ],
+        "cariesRisk": "low",
+        "riskFactors": [
+          "Good oral hygiene",
+          "Dental sealants present",
+          "Fluoridated water source"
+        ],
+        "counselingTopics": [
+          "Brushing technique",
+          "Diet/sugar reduction"
+        ],
+        "referralsNeeded": [
+          "Orthodontic evaluation"
+        ]
+      },
+      "softTissue": {
+        "lips": "wnl"
+      },
+      "toothChart": {},
+      "dentitionType": "mixed",
+      "perio": {
+        "pediatricVisualExam": true,
+        "periodontiumType": "Periodontally Healthy",
+        "ohStatus": "Good"
+      },
+      "occlusion": {
+        "molarClassR": "II",
+        "molarClassL": "II",
+        "overjet": "increased"
+      },
+      "radiographs": {
+        "none": false,
+        "taken": [
+          {
+            "type": "BWX (2 films)",
+            "reason": "Recall bitewing schedule (≥6 mo since last)",
+            "panoIndications": []
+          }
+        ],
+        "findings": [
+          "No significant findings"
+        ]
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D0120",
+          "description": "Periodic oral evaluation",
+          "teeth": [],
+          "surfaces": []
+        },
+        {
+          "cdtCode": "D1120",
+          "description": "Prophylaxis - child",
+          "teeth": [],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [],
+      "treatmentPlan": [],
+      "patientEducation": [
+        "Sugar-sweetened beverage reduction"
+      ],
+      "signedConsents": []
+    }
+  },
+  {
+    "name": "seed b2-13: limited problem-focused D0140 cracked tooth",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "limited",
+        "visitDate": "2026-05-28",
+        "age": 52
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "pain",
+        "location": "LR",
+        "severity": 5,
+        "character": [
+          "sharp",
+          "Provoked by chewing"
+        ]
+      },
+      "softTissue": {
+        "lips": "wnl"
+      },
+      "toothChart": {
+        "30": {
+          "conditions": [
+            "fracture"
+          ],
+          "surfaces": []
+        }
+      },
+      "dentitionType": "permanent",
+      "perio": {},
+      "occlusion": {},
+      "radiographs": {
+        "none": false,
+        "taken": [
+          {
+            "type": "Periapical",
+            "reason": "Pain in lower-right quadrant",
+            "panoIndications": []
+          }
+        ],
+        "findings": [
+          "No significant findings"
+        ]
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D0140",
+          "description": "Limited oral evaluation - problem focused",
+          "teeth": [
+            "30"
+          ],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [
+        "K03.81 — Cracked tooth"
+      ],
+      "treatmentPlan": [
+        {
+          "cdtCode": "D2740",
+          "description": "Crown - porcelain/ceramic",
+          "teeth": [
+            "30"
+          ],
+          "priority": "soon"
+        }
+      ],
+      "patientEducation": [],
+      "signedConsents": []
+    }
+  },
+  {
+    "name": "seed b2-14: same-day CEREC crown, previously RCT tooth",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-28",
+        "age": 47,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "scheduledTreatment": {
+        "procedures": [
+          {
+            "id": "c1",
+            "type": "crown",
+            "tooth": "19",
+            "appointmentType": "Same-day CEREC",
+            "crownType": "E.max (lithium disilicate)",
+            "anestheticDrug": "Septocaine (articaine) 4% with 1:200,000 epi",
+            "anestheticCarpules": 1,
+            "anestheticTechnique": "Inferior alveolar nerve block",
+            "cerecScanDevice": "CEREC Primescan",
+            "cerecMill": "CEREC Primemill",
+            "cerecCrystallization": "Programat CS / SpeedFire oven, full crystallization cycle",
+            "cerecCrownMaterial": "E.max CAD",
+            "vitality": "Previously RCT",
+            "cementation": "RelyX Unicem (resin cement)",
+            "hemostaticAgent": "ViscoStat",
+            "fieldIsolatedDry": true,
+            "additionalNotes": ""
+          }
+        ]
+      },
+      "signedConsents": [
+        "general",
+        "crown",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-15: CDT conflict — D0120 + D0150 same encounter",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "comprehensive",
+        "visitDate": "2026-05-28",
+        "age": 38
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "recall"
+      },
+      "softTissue": {
+        "lips": "wnl"
+      },
+      "toothChart": {},
+      "dentitionType": "permanent",
+      "perio": {},
+      "occlusion": {},
+      "radiographs": {
+        "none": true,
+        "taken": []
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D0120",
+          "description": "Periodic oral evaluation",
+          "teeth": [],
+          "surfaces": []
+        },
+        {
+          "cdtCode": "D0150",
+          "description": "Comprehensive oral evaluation",
+          "teeth": [],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [],
+      "treatmentPlan": [],
+      "patientEducation": [],
+      "signedConsents": []
+    }
+  },
+  {
+    "name": "seed b2-16: nitrous D9230 + child composite (comprehensive)",
+    "chart": {
+      "visitSetup": {
+        "patientType": "child",
+        "visitType": "comprehensive",
+        "visitDate": "2026-05-28",
+        "age": 7
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "pain",
+        "location": "UR primary molar",
+        "severity": 3,
+        "character": [
+          "cold sensitivity"
+        ]
+      },
+      "softTissue": {
+        "lips": "wnl"
+      },
+      "toothChart": {
+        "B": {
+          "conditions": [
+            "caries"
+          ],
+          "surfaces": [
+            "O"
+          ]
+        }
+      },
+      "dentitionType": "mixed",
+      "perio": {
+        "pediatricVisualExam": true,
+        "periodontiumType": "Periodontally Healthy",
+        "ohStatus": "Good"
+      },
+      "occlusion": {},
+      "radiographs": {
+        "none": false,
+        "taken": [
+          {
+            "type": "BWX (2 films)",
+            "reason": "Suspected interproximal caries (clinical exam inconclusive)",
+            "panoIndications": []
+          }
+        ],
+        "findings": [
+          "Interproximal caries"
+        ]
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D9230",
+          "description": "Nitrous oxide / analgesia",
+          "teeth": [],
+          "surfaces": []
+        },
+        {
+          "cdtCode": "D2391",
+          "description": "Composite - one surface, posterior",
+          "teeth": [
+            "B"
+          ],
+          "surfaces": [
+            "O"
+          ]
+        }
+      ],
+      "diagnoses": [
+        "K02.51 — Caries pit/fissure → enamel",
+        "F40.232 — Fear of dental procedures"
+      ],
+      "treatmentPlan": [],
+      "patientEducation": [
+        "Early childhood caries prevention"
+      ],
+      "signedConsents": [
+        "general",
+        "nitrous",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-17: 4-surface posterior composite D2394 (high audit)",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-28",
+        "age": 55,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": true,
+        "changesDetail": "started metformin 500mg BID for new type 2 diabetes diagnosis 1 month ago",
+        "conditions": [
+          "Diabetes"
+        ],
+        "allergies": [
+          "NKA"
+        ],
+        "medications": "metformin"
+      },
+      "scheduledTreatment": {
+        "procedures": [
+          {
+            "id": "p1",
+            "type": "filling",
+            "tooth": "30",
+            "material": "Composite",
+            "surfaces": [
+              "M",
+              "O",
+              "D",
+              "B"
+            ],
+            "decayDepth": "Deep (close to pulp)",
+            "anestheticDrug": "Septocaine (articaine) 4% with 1:200,000 epi",
+            "anestheticCarpules": 1.5,
+            "anestheticTechnique": "Inferior alveolar nerve block",
+            "isolation": "Rubber dam",
+            "prepCleaning": "Consepsis",
+            "prepMethod": "Bur + air abrasion",
+            "etchType": "37% phosphoric acid",
+            "etchTimeEnamel": 30,
+            "etchTimeDentin": 15,
+            "bondingAgent": "Tokuyama Universal Bond",
+            "msdsReviewed": true,
+            "matrixSystem": "V-ring + plastic wedge",
+            "hemostaticAgent": "None",
+            "cureTimeSec": 20,
+            "valoPowerCures": true,
+            "compositeProduct": "Omnichroma Blocker packable",
+            "base": "Flowable composite liner",
+            "fieldIsolatedDry": true,
+            "occlusionAdjusted": true,
+            "additionalNotes": ""
+          }
+        ]
+      },
+      "signedConsents": [
+        "general",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-18: SRP two quadrants D4341",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-28",
+        "age": 56,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "conditions": [
+          "Hypertension"
+        ],
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "scheduledTreatment": {
+        "procedures": []
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D4341",
+          "description": "SRP - 4+ teeth per quadrant",
+          "teeth": [
+            "UR",
+            "UL"
+          ],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [
+        "K05.322 — Chronic periodontitis generalized moderate"
+      ],
+      "signedConsents": [
+        "general",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-19: stainless steel crown D2930 primary molar (EPSDT)",
+    "chart": {
+      "visitSetup": {
+        "patientType": "epsdt",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-28",
+        "age": 6,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "scheduledTreatment": {
+        "procedures": [
+          {
+            "id": "c1",
+            "type": "crown",
+            "tooth": "T",
+            "appointmentType": "Seat (lab case delivery)",
+            "crownType": "Stainless steel (pediatric)",
+            "anestheticDrug": "Septocaine (articaine) 4% with 1:200,000 epi",
+            "anestheticCarpules": 0.5,
+            "anestheticTechnique": "Infiltration",
+            "cementation": "Fuji Evolve RMGI cement",
+            "fieldIsolatedDry": true,
+            "additionalNotes": "Primary molar with extensive caries"
+          }
+        ]
+      },
+      "signedConsents": [
+        "general",
+        "crown",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b2-20: recare recall, no findings, exam + prophy + varnish",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "periodic",
+        "visitDate": "2026-05-28",
+        "age": 42
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "recall"
+      },
+      "softTissue": {
+        "lips": "wnl",
+        "tongue": "wnl",
+        "gingiva": "wnl"
+      },
+      "toothChart": {},
+      "dentitionType": "permanent",
+      "perio": {
+        "periodontiumType": "Periodontally Healthy",
+        "bop": "None",
+        "pocketDepthRange": "1–3 mm (WNL)",
+        "ohStatus": "Good"
+      },
+      "occlusion": {},
+      "radiographs": {
+        "none": false,
+        "taken": [
+          {
+            "type": "BWX (2 films)",
+            "reason": "Recall bitewing schedule (≥6 mo since last)",
+            "panoIndications": []
+          }
+        ],
+        "findings": [
+          "No significant findings"
+        ]
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D0120",
+          "description": "Periodic oral evaluation",
+          "teeth": [],
+          "surfaces": []
+        },
+        {
+          "cdtCode": "D1110",
+          "description": "Prophylaxis - adult",
+          "teeth": [],
+          "surfaces": []
+        },
+        {
+          "cdtCode": "D1206",
+          "description": "Topical fluoride varnish",
+          "teeth": [],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [],
+      "treatmentPlan": [],
+      "patientEducation": [
+        "Flossing/interdental cleaning",
+        "Dietary counseling"
+      ],
+      "signedConsents": []
+    }
   }
 ]
