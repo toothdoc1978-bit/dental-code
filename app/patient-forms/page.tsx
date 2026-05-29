@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CTABanner } from "@/components/CTABanner";
 import { PhoneLink } from "@/components/PhoneLink";
+import { Hero } from "@/components/ui/Hero";
 import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -39,17 +40,12 @@ const formsReady = formsLink && !formsLink.startsWith("TODO");
 export default function PatientFormsPage() {
   return (
     <>
-      <section className="bg-gradient-to-b from-brand-50 to-white">
-        <div className="container-page py-16 md:py-20">
-          <p className="eyebrow">Patient Info</p>
-          <h1 className="mt-3 font-display text-4xl font-semibold text-ink sm:text-5xl">
-            Patient Forms & Visit Information
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg text-ink-muted">
-            Complete your patient forms before your visit to save time at the office. You can fill out forms
-            securely online, or download printable versions to complete by hand and bring with you.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+      <Hero
+        eyebrow="Patient Info"
+        title="Patient Forms & Visit Information"
+        subtitle="Complete your patient forms before your visit to save time at the office. You can fill out forms securely online, or download printable versions to complete by hand and bring with you."
+        actions={
+          <>
             {formsReady ? (
               <a href={formsLink} target="_blank" rel="noreferrer" className="btn-primary">
                 Fill out forms online
@@ -63,9 +59,9 @@ export default function PatientFormsPage() {
               Download printable packet
             </a>
             <PhoneLink className="btn-secondary" />
-          </div>
-        </div>
-      </section>
+          </>
+        }
+      />
 
       <section className="container-page grid gap-10 py-16 md:grid-cols-2">
         <div className="card">

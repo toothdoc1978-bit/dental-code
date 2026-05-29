@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { CTABanner } from "@/components/CTABanner";
+import { Reveal } from "@/components/motion/Reveal";
+import { Hero } from "@/components/ui/Hero";
+import { Section } from "@/components/ui/Section";
 
 export const metadata: Metadata = {
   title: "Dental Blog & Patient Tips",
@@ -23,21 +26,14 @@ const upcomingTopics = [
 export default function BlogIndexPage() {
   return (
     <>
-      <section className="bg-gradient-to-b from-brand-50 to-white">
-        <div className="container-page py-16 md:py-20">
-          <p className="eyebrow">Blog</p>
-          <h1 className="mt-3 font-display text-4xl font-semibold text-ink sm:text-5xl">
-            Dental tips, patient education, and Bastrop news
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg text-ink-muted">
-            We're putting together a regular series of practical dental articles for our patients and
-            neighbors. Expect plain-spoken answers to the questions we get asked every day.
-          </p>
-        </div>
-      </section>
+      <Hero
+        eyebrow="Blog"
+        title="Dental tips, patient education, and Bastrop news"
+        subtitle="We're putting together a regular series of practical dental articles for our patients and neighbors. Expect plain-spoken answers to the questions we get asked every day."
+      />
 
-      <section className="container-page py-16">
-        <div className="card max-w-3xl">
+      <Section>
+        <Reveal className="card max-w-3xl">
           <h2 className="font-display text-2xl font-semibold text-ink">Coming soon</h2>
           <p className="mt-3 text-sm text-ink-muted">
             New articles are on the way. Topics we're planning to cover:
@@ -51,10 +47,10 @@ export default function BlogIndexPage() {
             ))}
           </ul>
           <p className="mt-6 text-sm text-ink-muted">
-            Have a question you'd like us to write about? Mention it next time you call or visit.
+            Have a question you&apos;d like us to write about? Mention it next time you call or visit.
           </p>
-        </div>
-      </section>
+        </Reveal>
+      </Section>
 
       <CTABanner />
     </>

@@ -1,19 +1,14 @@
 import Link from "next/link";
 import { PhoneLink } from "./PhoneLink";
+import { Hero } from "@/components/ui/Hero";
 import type { PostOp } from "@/lib/post-op";
 
 export function PostOpTemplate({ p }: { p: PostOp }) {
   return (
     <>
-      <section className="bg-gradient-to-b from-brand-50 to-white">
-        <div className="container-page py-16 md:py-20">
-          <p className="eyebrow">Post-Op Instructions</p>
-          <h1 className="mt-3 font-display text-4xl font-semibold text-ink sm:text-5xl">{p.name}</h1>
-          <p className="mt-5 max-w-2xl text-lg text-ink-muted">{p.intro}</p>
-        </div>
-      </section>
+      <Hero eyebrow="Post-Op Instructions" title={p.name} subtitle={p.intro} />
 
-      <section className="container-page py-12">
+      <section className="container-page pt-12 pb-12">
         <div className="rounded-2xl border-l-4 border-l-rose-500 bg-rose-50 p-6">
           <h2 className="font-display text-xl font-semibold text-rose-900">Call us if…</h2>
           <ul className="mt-3 space-y-2 text-sm text-rose-900">

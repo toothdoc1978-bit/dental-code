@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { CTABanner } from "@/components/CTABanner";
 import { GalleryGrid } from "@/components/GalleryGrid";
+import { Hero } from "@/components/ui/Hero";
+import { Section } from "@/components/ui/Section";
 
 export const metadata: Metadata = {
   title: "Smile Gallery — Before & After",
@@ -12,22 +14,15 @@ export const metadata: Metadata = {
 export default function SmileGalleryPage() {
   return (
     <>
-      <section className="bg-gradient-to-b from-brand-50 to-white">
-        <div className="container-page py-16 md:py-20">
-          <p className="eyebrow">Smile Gallery</p>
-          <h1 className="mt-3 font-display text-4xl font-semibold text-ink sm:text-5xl">
-            Real patients. Real transformations.
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg text-ink-muted">
-            Every smile here was designed for the person behind it. Many were completed in days using our
-            in-office mill — not weeks of waiting for an outside lab.
-          </p>
-        </div>
-      </section>
+      <Hero
+        eyebrow="Smile Gallery"
+        title="Real patients. Real transformations."
+        subtitle="Every smile here was designed for the person behind it. Many were completed in days using our in-office mill — not weeks of waiting for an outside lab."
+      />
 
-      <section className="container-page py-16">
+      <Section>
         <GalleryGrid />
-      </section>
+      </Section>
 
       <CTABanner
         title="Imagine your before-and-after."

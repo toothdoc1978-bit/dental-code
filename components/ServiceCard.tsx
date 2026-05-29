@@ -49,17 +49,17 @@ export function ServiceCard({ service }: { service: Service }) {
   return (
     <Link
       href={`/services/${service.slug}`}
-      className="group card flex flex-col gap-4 transition hover:-translate-y-0.5 hover:shadow-lg"
+      className="group card card-hover flex h-full flex-col gap-4"
     >
-      <div className="grid h-12 w-12 place-items-center rounded-xl bg-brand-50 text-brand-600">
+      <div className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-50 text-brand-600 transition-transform duration-300 ease-apple group-hover:scale-110">
         {icons[service.iconKey]}
       </div>
       <div>
         <h3 className="font-display text-xl font-semibold text-ink">{service.name}</h3>
         <p className="mt-2 text-sm text-ink-muted">{service.short}</p>
       </div>
-      <span className="mt-auto text-sm font-semibold text-brand-700 group-hover:text-brand-600">
-        Learn more →
+      <span className="mt-auto inline-flex items-center gap-1 text-sm font-semibold text-brand-700 group-hover:text-brand-600">
+        Learn more <span className="transition-transform duration-300 ease-apple group-hover:translate-x-0.5">→</span>
       </span>
     </Link>
   );

@@ -24,16 +24,82 @@
   .container-page {
     @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
   }
+  .container-wide {
+    @apply mx-auto w-full max-w-8xl px-5 sm:px-8;
+  }
+  .section-pad {
+    @apply py-24 sm:py-32;
+  }
+
+  /* Buttons — Apple-style pill with subtle lift */
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-2xl bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-7 py-3.5 text-sm font-semibold text-white shadow-soft transition duration-300 ease-apple hover:-translate-y-0.5 hover:bg-brand-700 hover:shadow-lift focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-2xl border border-brand-600 bg-white px-6 py-3 text-sm font-semibold text-brand-700 transition hover:bg-brand-50;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-brand-200 bg-white/80 px-7 py-3.5 text-sm font-semibold text-brand-700 backdrop-blur transition duration-300 ease-apple hover:-translate-y-0.5 hover:border-brand-300 hover:bg-white hover:shadow-glass;
   }
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 transition-colors hover:text-brand-600;
+  }
+  .btn-ghost-arrow {
+    @apply inline-block transition-transform duration-300 ease-apple;
+  }
+  .btn-ghost:hover .btn-ghost-arrow {
+    transform: translateX(2px);
+  }
+
+  /* Glass navigation */
+  .glass-nav {
+    @apply border-b border-black/[0.06] bg-white/70 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60;
+  }
+
+  /* Cards */
   .card {
-    @apply rounded-2xl bg-white p-6 shadow-soft ring-1 ring-brand-50;
+    @apply rounded-3xl bg-white p-6 shadow-glass ring-1 ring-black/[0.04] transition duration-400 ease-apple;
   }
+  .card-hover {
+    @apply hover:-translate-y-1 hover:shadow-lift;
+  }
+  .glass-card {
+    @apply rounded-3xl border border-white/60 bg-white/70 p-6 shadow-glass backdrop-blur-xl;
+  }
+
   .eyebrow {
     @apply text-xs font-semibold uppercase tracking-[0.2em] text-brand-600;
+  }
+  .hairline {
+    @apply border-black/[0.06];
+  }
+
+  /* Aurora / mesh background substitute for imagery */
+  .aurora {
+    @apply bg-aurora;
+  }
+  .mesh-bg {
+    @apply relative isolate overflow-hidden bg-surface;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}
+
+/* Respect users who prefer reduced motion (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

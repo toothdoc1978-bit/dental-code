@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/ContactForm";
 import { PhoneLink } from "@/components/PhoneLink";
+import { Reveal } from "@/components/motion/Reveal";
+import { Hero } from "@/components/ui/Hero";
 import { fullAddress, site } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -14,21 +16,16 @@ const mapQuery = encodeURIComponent(fullAddress);
 export default function ContactPage() {
   return (
     <>
-      <section className="bg-gradient-to-b from-brand-50 to-white">
-        <div className="container-page py-16 md:py-20">
-          <p className="eyebrow">Contact</p>
-          <h1 className="mt-3 font-display text-4xl font-semibold text-ink sm:text-5xl">
-            Request an appointment.
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg text-ink-muted">
-            Send a quick message and we'll be in touch — usually the same business day. For urgent care or a
-            same-day appointment, please call us directly.
-          </p>
-        </div>
-      </section>
+      <Hero
+        eyebrow="Contact"
+        title="Request an appointment."
+        subtitle="Send a quick message and we'll be in touch — usually the same business day. For urgent care or a same-day appointment, please call us directly."
+      />
 
-      <section className="container-page grid gap-10 py-12 md:grid-cols-[1.2fr_1fr]">
-        <ContactForm />
+      <section className="container-page grid gap-10 pb-12 md:grid-cols-[1.2fr_1fr]">
+        <Reveal>
+          <ContactForm />
+        </Reveal>
 
         <aside className="flex flex-col gap-6">
           <div className="card">
@@ -82,18 +79,20 @@ export default function ContactPage() {
         </aside>
       </section>
 
-      <section className="container-page pb-20">
-        <div className="overflow-hidden rounded-2xl shadow-soft ring-1 ring-brand-50">
-          <iframe
-            title={`Map showing ${site.practiceName}`}
-            src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
-            width="100%"
-            height="420"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            className="block w-full border-0"
-          />
-        </div>
+      <section className="container-page pb-24">
+        <Reveal>
+          <div className="overflow-hidden rounded-3xl shadow-glass ring-1 ring-black/[0.06]">
+            <iframe
+              title={`Map showing ${site.practiceName}`}
+              src={`https://www.google.com/maps?q=${mapQuery}&output=embed`}
+              width="100%"
+              height="420"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="block w-full border-0"
+            />
+          </div>
+        </Reveal>
       </section>
     </>
   );
