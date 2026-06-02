@@ -4,6 +4,23 @@
 
 import { MEDICAL_NECESSITY_TEMPLATES } from '../src/data/examDefaults.js'
 
+// Mirrors server/noteGenerator.js#requiresInvasiveConsent (kept inline so the rubric
+// stays free of server-side SDK imports). If you change one, change the other.
+function requiresInvasiveConsent(data) {
+  const procs = data?.scheduledTreatment?.procedures || []
+  if (procs.some((p) => ['extraction', 'endo', 'crown'].includes(p?.type))) return true
+  const rendered = data?.treatmentRendered || []
+  return rendered.some((t) => {
+    const c = t?.cdtCode || ''
+    if (/^D3\d{3}$/.test(c)) return true
+    if (/^D7\d{3}$/.test(c)) return true
+    if (c === 'D4341' || c === 'D4342') return true
+    if (/^D27[4-9]\d$/.test(c)) return true
+    if (['D9230', 'D9241', 'D9243', 'D9248'].includes(c)) return true
+    return false
+  })
+}
+
 const m = (text, re) => re.test(text)
 const wordCount = (s) => (s.trim().match(/\S+/g) || []).length
 
@@ -26,6 +43,14 @@ function radiographsTaken(chart) {
 
 function hasCatchAll(chart) {
   return (chart.radiographs?.taken || []).some((t) => (t.panoIndications || []).includes('alara-retake'))
+}
+
+// A catch-all radiograph with an empty reason isn't an actual rephrasing case — the prompt is
+// instructed to flag the missing reason rather than fabricate one. Detect that state separately.
+function hasCatchAllWithEmptyReason(chart) {
+  return (chart.radiographs?.taken || []).some(
+    (t) => (t.panoIndications || []).includes('alara-retake') && !(t.alaraCatchAllReason || '').trim()
+  )
 }
 
 function scheduledProcs(chart) {
@@ -103,6 +128,19 @@ export const RUBRIC = [
     why: 'Each radiograph needs an ALARA clinical rationale; catch-all needs the dynamic-rephrasing concepts.',
     applies: (c) => radiographsTaken(c),
     evaluate: (note, c) => {
+      if (hasCatchAllWithEmptyReason(c)) {
+        // Reason is blank — prompt is instructed to flag the gap, not generate the dynamic-rephrasing concepts.
+        // Pass when the note explicitly flags the missing rationale within ~140 chars of ALARA or the
+        // radiograph noun, using any of: missing/absent/no rationale, addendum/finaliz, record deficiency,
+        // not documented/supplied/specified/recorded/on file, treating dentist should/must.
+        const flagged = m(
+          note,
+          /(ALARA[^.]{0,140}(?:not (?:documented|specified|supplied|provided|recorded|on file)|missing|absent|absence of|gap|deficien|addendum|finaliz|treating dentist (?:should|must|may)|flagged as a record)|no (?:specific|clinical|documented)?\s*(?:clinical )?(?:rationale|indication|reason)[^.]{0,140}(?:radiograph|imag|panoram|ALARA)|(?:rationale|indication|reason)[^.]{0,140}(?:was )?not (?:documented|supplied|provided|recorded|on file)|absence of a documented (?:clinical )?(?:rationale|indication|reason))/i
+        )
+        return flagged
+          ? { status: 'pass', detail: 'catch-all empty-reason flagged (prompt did not fabricate)' }
+          : { status: 'fail', detail: 'catch-all reason blank but note neither flags the gap nor declines to fabricate' }
+      }
       if (hasCatchAll(c)) {
         const ok = m(note, /ALARA/i) && m(note, /digital extraoral/i) && m(note, /pediatric (dose|collimation|dose-reduction)/i)
         return ok
@@ -121,14 +159,27 @@ export const RUBRIC = [
   },
   {
     name: 'consent_fork',
-    why: 'Consent language only when consents are signed; never invented when none recorded.',
+    why: 'Consent language only when consents are signed OR an invasive procedure is documented without consent (where the note must flag the gap).',
     applies: (c) => hasOperative(c),
     evaluate: (note, c) => {
       const hasConsentLang = m(note, /consent/i)
       const signed = (c.signedConsents || []).length > 0
+      const invasive = requiresInvasiveConsent(c)
       if (signed && !hasConsentLang) return { status: 'fail', detail: 'consents signed but no consent sentence' }
-      if (!signed && hasConsentLang) return { status: 'fail', detail: 'consent language present with NONE recorded (fabrication)' }
-      return { status: 'pass', detail: signed ? 'consent confirmed' : 'correctly silent on consent' }
+      if (!signed && !invasive && hasConsentLang) return { status: 'fail', detail: 'consent language present with NONE recorded (fabrication)' }
+      // When !signed && invasive, the note SHOULD mention consent (as a flag) — handled by consent_required_on_invasive.
+      return { status: 'pass', detail: signed ? 'consent confirmed' : invasive ? 'flag path (see consent_required_on_invasive)' : 'correctly silent on consent' }
+    }
+  },
+  {
+    name: 'consent_required_on_invasive',
+    why: 'Invasive procedures (extraction, endo, crown, SRP, sedation) without a signed consent on file must be flagged as a documentation gap, not silently passed.',
+    applies: (c) => requiresInvasiveConsent(c) && !(c.signedConsents || []).length,
+    evaluate: (note) => {
+      // Pass when the note explicitly flags the gap — mentions consent in proximity to a gap/addendum word.
+      const flagged = m(note, /(no (?:signed )?(?:informed )?consent[^.]{0,120}(?:on file|in the chart|located|found|documented|addendum|signature|prior to finaliz|audit))|((?:addendum|signature|finaliz)[^.]{0,80}consent)|(consent[^.]{0,60}(?:not (?:on file|documented|located|found|signed)|gap|missing))/i)
+      if (flagged) return { status: 'pass', detail: 'consent gap flagged for addendum' }
+      return { status: 'fail', detail: 'invasive procedure documented but consent gap not flagged' }
     }
   },
   {
@@ -192,7 +243,10 @@ export const RUBRIC = [
     why: 'Exam-only visits must not invent post-op or closing-block language.',
     applies: (c) => !hasOperative(c),
     evaluate: (note) =>
-      m(note, /(post-operative instructions|prognosis was discussed|verbalized understanding)/i)
+      // Only fail when verbalized-understanding language is anchored to a procedure/post-op concept
+      // (instructions, post-op care, risks, treatment, the procedure). On exam-only EPSDT visits the
+      // caregiver routinely "verbalizes understanding" of *counseling/education*, which is fine.
+      m(note, /(post-operative instructions|prognosis was discussed|verbalized understanding[^.]{0,80}(?:post-?op|procedure|treatment|instructions|risks|care given|aftercare)|(?:post-?op|procedure|treatment|aftercare)[^.]{0,80}verbalized understanding)/i)
         ? { status: 'fail', detail: 'post-op/closing language on a non-operative visit' }
         : { status: 'pass', detail: 'correctly omits post-op language' }
   },

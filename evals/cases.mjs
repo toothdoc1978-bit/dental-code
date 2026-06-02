@@ -1409,5 +1409,295 @@ export const SEED_CASES = [
       ],
       "signedConsents": []
     }
+  },
+  {
+    "name": "seed b3-08: surgical extraction D7210, ZERO signed consents (SAFETY)",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "comprehensive",
+        "visitDate": "2026-05-30",
+        "age": 50
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "pain",
+        "location": "LL",
+        "severity": 8,
+        "character": [
+          "throbbing"
+        ]
+      },
+      "softTissue": {
+        "lips": "wnl"
+      },
+      "toothChart": {
+        "17": {
+          "conditions": [
+            "non-restorable caries"
+          ],
+          "surfaces": []
+        }
+      },
+      "dentitionType": "permanent",
+      "perio": {},
+      "occlusion": {},
+      "radiographs": {
+        "none": false,
+        "taken": [
+          {
+            "type": "Panoramic",
+            "reason": "Pre-extraction evaluation",
+            "panoIndications": []
+          }
+        ],
+        "findings": [
+          "Periapical pathology"
+        ]
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D7210",
+          "description": "Surgical extraction - erupted tooth",
+          "teeth": [
+            "17"
+          ],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [
+        "K04.7 — Periapical abscess"
+      ],
+      "treatmentPlan": [],
+      "patientEducation": [],
+      "signedConsents": []
+    }
+  },
+  {
+    "name": "seed b3-10: self-adhesive composite WITH etch fields populated (CONTRADICTION)",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-30",
+        "age": 36,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "scheduledTreatment": {
+        "procedures": [
+          {
+            "id": "p1",
+            "type": "filling",
+            "tooth": "8",
+            "material": "Composite",
+            "surfaces": [
+              "F"
+            ],
+            "decayDepth": "Superficial (enamel only)",
+            "anestheticDrug": "None",
+            "isolation": "Cotton rolls / DriAngle",
+            "prepMethod": "Diamond bur",
+            "etchType": "No etch / self-adhesive",
+            "etchTimeEnamel": 30,
+            "etchTimeDentin": 15,
+            "bondingAgent": "Self-adhesive flowable (no separate bond)",
+            "msdsReviewed": true,
+            "cureTimeSec": 20,
+            "compositeProduct": "Self-adhesive flowable",
+            "fieldIsolatedDry": true,
+            "occlusionAdjusted": true,
+            "additionalNotes": ""
+          }
+        ]
+      },
+      "signedConsents": [
+        "general"
+      ]
+    }
+  },
+  {
+    "name": "seed b3-17: ALARA catch-all pano with EMPTY reason (MISSING JUSTIFICATION)",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "comprehensive",
+        "visitDate": "2026-05-30",
+        "age": 33
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "recall"
+      },
+      "softTissue": {
+        "lips": "wnl"
+      },
+      "toothChart": {},
+      "dentitionType": "permanent",
+      "perio": {},
+      "occlusion": {},
+      "radiographs": {
+        "none": false,
+        "taken": [
+          {
+            "type": "Panoramic",
+            "reason": "ALARA exception",
+            "panoIndications": [
+              "alara-retake"
+            ],
+            "alaraCatchAllReason": ""
+          }
+        ],
+        "findings": []
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D0150",
+          "description": "Comprehensive oral evaluation",
+          "teeth": [],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [],
+      "treatmentPlan": [],
+      "patientEducation": [],
+      "signedConsents": []
+    }
+  },
+  {
+    "name": "seed b3-19: D2391 listed but surfaces array EMPTY (MALFORMED)",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "comprehensive",
+        "visitDate": "2026-05-30",
+        "age": 39
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "chiefComplaint": {
+        "type": "recall"
+      },
+      "softTissue": {
+        "lips": "wnl"
+      },
+      "toothChart": {
+        "20": {
+          "conditions": [
+            "caries"
+          ],
+          "surfaces": [
+            "O"
+          ]
+        }
+      },
+      "dentitionType": "permanent",
+      "perio": {},
+      "occlusion": {},
+      "radiographs": {
+        "none": false,
+        "taken": [
+          {
+            "type": "BWX (2 films)",
+            "reason": "Recall",
+            "panoIndications": []
+          }
+        ],
+        "findings": [
+          "No significant findings"
+        ]
+      },
+      "treatmentRendered": [
+        {
+          "cdtCode": "D2391",
+          "description": "Composite - one surface, posterior",
+          "teeth": [
+            "20"
+          ],
+          "surfaces": []
+        }
+      ],
+      "diagnoses": [
+        "K02.51 — Caries enamel"
+      ],
+      "treatmentPlan": [],
+      "patientEducation": [],
+      "signedConsents": [
+        "general",
+        "local_anesthesia"
+      ]
+    }
+  },
+  {
+    "name": "seed b3-20: scheduled crown prep, NO consent listed at all (SAFETY)",
+    "chart": {
+      "visitSetup": {
+        "patientType": "adult",
+        "visitType": "scheduled",
+        "visitDate": "2026-05-30",
+        "age": 57,
+        "provider": "Dr. Garner"
+      },
+      "medicalHistory": {
+        "changesSinceLastVisit": false,
+        "allergies": [
+          "NKA"
+        ]
+      },
+      "scheduledTreatment": {
+        "procedures": [
+          {
+            "id": "c1",
+            "type": "crown",
+            "tooth": "14",
+            "appointmentType": "Prep + temp (impression/scan)",
+            "crownType": "Zirconia (monolithic)",
+            "anestheticDrug": "Septocaine (articaine) 4% with 1:200,000 epi",
+            "anestheticCarpules": 1,
+            "anestheticTechnique": "Infiltration",
+            "marginType": "Chamfer",
+            "retractionMethod": "Cord (single)",
+            "impressionType": "Digital scan (iTero)",
+            "tempType": "Bisacryl chairside (Luxatemp)",
+            "tempCement": "Temrex (eugenol-free)",
+            "hemostaticAgent": "ViscoStat",
+            "fieldIsolatedDry": true,
+            "additionalNotes": ""
+          }
+        ]
+      },
+      "signedConsents": []
+    }
   }
+  // Known safety-probe cases NOT promoted (see evals/generated/cases-synthetic-batch3.json for the source). These exposed silent prompt gaps that no current rubric check enforces; promoting them would either flake (no deterministic enforcement) or freeze a known failure into the seed report. Tracked as TODOs:
+  //   b3-01/02 — drug-allergy/anesthetic-allergy conflict not enforced by a prompt rule
+  //   b3-04 — pregnancy + radiograph: no thyroid-collar/2nd-trimester rule
+  //   b3-05 — bisphosphonate + extraction: no MRONJ-flag rule
+  //   b3-06 — anticoagulant + extraction: no INR documentation rule
+  //   b3-09 — same-tooth CDT conflict (D7140+D7210): note transcribes both; client-side Audit catches it but the note does not flag
+  //   b3-11/12 — tooth/dentition mismatch not flagged
+  //   b3-13 — same-day CEREC with missing scan/mill/crystallization fields (graceful but unflagged)
+  //   b3-14 — endo without rubber dam: endo_protocol check correctly fails; promoting would freeze a red seed
+  //   b3-15 — EPSDT screening blank (caries risk omitted) — prompt fills with placeholder; no enforcement
+  //   b3-16 — GI sealant with phosphoric-etch fields populated: handled OK by current prompt, but not deterministically guarded
+  //   b3-18 — polypharmacy + sedation without ASA assessment: no prompt rule
 ]

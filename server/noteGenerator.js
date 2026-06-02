@@ -471,14 +471,32 @@ function buildClosingDocBlock(treatmentRendered, scheduledTreatment) {
   ].join('\n')
 }
 
-function buildConsentsBlock(signedConsents) {
+export function requiresInvasiveConsent(data) {
+  const procs = data?.scheduledTreatment?.procedures || []
+  if (procs.some((p) => ['extraction', 'endo', 'crown'].includes(p?.type))) return true
+  const rendered = data?.treatmentRendered || []
+  return rendered.some((t) => {
+    const c = t?.cdtCode || ''
+    if (/^D3\d{3}$/.test(c)) return true // endodontics
+    if (/^D7\d{3}$/.test(c)) return true // oral surgery / extractions
+    if (c === 'D4341' || c === 'D4342') return true // SRP
+    if (/^D27[4-9]\d$/.test(c)) return true // crowns (D2740–D2799)
+    if (['D9230', 'D9241', 'D9243', 'D9248'].includes(c)) return true // sedation
+    return false
+  })
+}
+
+function buildConsentsBlock(signedConsents, invasiveConsentRequired) {
   const labels = Array.isArray(signedConsents)
     ? signedConsents.map((id) => CONSENTS.find((c) => c.id === id)?.label || id).filter(Boolean)
     : []
-  if (!labels.length) {
-    return 'CONSENTS_STATUS: NONE_RECORDED — do NOT include any consent-obtained, informed-consent, or consent-discussed language anywhere in the note. The consent topic must be silently omitted.'
+  if (labels.length) {
+    return `CONSENTS_SIGNED: ${labels.join('; ')} — include a single natural sentence in the note confirming informed consent was obtained for these specific services. Do not list as bullets.`
   }
-  return `CONSENTS_SIGNED: ${labels.join('; ')} — include a single natural sentence in the note confirming informed consent was obtained for these specific services. Do not list as bullets.`
+  if (invasiveConsentRequired) {
+    return 'CONSENTS_STATUS: REQUIRED_BUT_MISSING — no signed consent is on file but an invasive procedure (extraction, endodontic therapy, crown, SRP, or sedation) is documented today. The Plan section MUST include exactly one prose sentence explicitly flagging that no signed informed consent was found in the chart for the documented procedure and that the record requires addendum/signature for audit defense. Do NOT fabricate language asserting consent was obtained, reviewed, or discussed; instead, surface the gap so the treating dentist can correct it before finalizing. Vary phrasing between regenerations.'
+  }
+  return 'CONSENTS_STATUS: NONE_RECORDED — do NOT include any consent-obtained, informed-consent, or consent-discussed language anywhere in the note. The consent topic must be silently omitted.'
 }
 
 const SYSTEM_PROMPT = `You are a clinical documentation assistant for a licensed Louisiana dentist. Your task is to transform structured dental examination data into a SOAP-format chart note suitable for a Dentrix G7 record, satisfying La. R.S. 37:757 (the dentist's obligation to keep a written record of every service performed) and the prevailing standard of care for dental documentation.
@@ -556,8 +574,9 @@ Rules:
 
 15. MEDICAL NECESSITY — When the user prompt contains a MEDICAL_NECESSITY block, each listed sentence is required boilerplate for payer audit defense and must appear in the note. The natural home for these sentences is the Plan section (or the Assessment section if the sentence is purely diagnostic, e.g., for D4341 SRP justification). You may smooth grammar to integrate each sentence into the surrounding narrative, but you MUST preserve every clinically-relevant token (tooth number, surfaces, decay depth, "necessary due to", "non-restorable", "vitality testing and periapical radiograph confirm pulpal pathology", "probing depths ≥4 mm", "bone removal/sectioning required", etc.). Do not omit any of the sentences listed. If a sentence references a tooth or surface not otherwise mentioned in the data, treat it as authoritative.
 
-16. CONSENTS — The user prompt will always contain exactly one of these two lines whenever procedures are documented. Consent language, when included, lives in the Plan section.
+16. CONSENTS — The user prompt will always contain exactly one of these three lines whenever procedures are documented. Consent language, when included, lives in the Plan section.
   - CONSENTS_SIGNED — include exactly one natural sentence in the Plan confirming informed consent was obtained for the listed services. Do not list them as a bullet point — integrate into prose. Example: "Informed consent for crown therapy and local anesthesia was reviewed with the patient and obtained prior to treatment."
+  - CONSENTS_STATUS: REQUIRED_BUT_MISSING — an invasive procedure is documented today (extraction, endodontic therapy, crown, SRP, or sedation) but the chart shows no signed consent on file. Include exactly one prose sentence in the Plan that explicitly flags the gap and calls for an addendum — do NOT write that consent was obtained, reviewed, or discussed. Example phrasings: "Note: no signed informed consent for the documented procedure was found in the chart; the record requires addendum/signature prior to finalization for audit defense." / "No signed consent for [procedure] was located in the chart at the time of this note; the treating dentist should obtain or document consent before the record is finalized." Vary the wording between regenerations.
   - CONSENTS_STATUS: NONE_RECORDED — this is a hard prohibition. Do NOT write any sentence containing the words "informed consent," "consent was obtained," "consent was reviewed," "consent for [anything]," or any similar phrasing anywhere in the note. The consent topic is silently absent. Do not flag the gap, do not warn, do not invent — just omit. Treat consent language the same way you would treat a clinical finding that wasn't documented: it doesn't appear.
 
 17. POST-OPERATIVE INSTRUCTIONS — when the user prompt contains a POSTOP_CONFIRMATION_REQUIRED line, the Plan section MUST conclude (or near-conclude, before the final next-step statement from rule #2) with exactly one natural sentence in prose confirming that post-operative care instructions were provided BOTH orally AND in writing, AND that the patient (or guardian/caregiver, when applicable) verbalized understanding of those instructions. The sentence must include all three concepts: oral delivery, written delivery, and the patient's expression of understanding. Vary the phrasing between regenerations (e.g., "Post-operative care instructions were reviewed verbally and provided in writing; the patient verbalized understanding." / "Both verbal and written post-operative instructions were given, and [PATIENT] indicated full understanding before being dismissed." / etc.). Do not list as a bullet. Do not omit any of the three concepts. When POSTOP_CONFIRMATION_REQUIRED is NOT present in the user prompt, do not add this sentence — it would be fabricated documentation.
@@ -573,7 +592,7 @@ export async function generateNote(rawData) {
   const catchAllEntries = findCatchAllEntries(data.radiographs || {})
   const catchAllBlock = buildCatchAllBlock(catchAllEntries)
   const necessityBlock = buildMedicalNecessityBlock(data.treatmentRendered)
-  const consentsBlock = buildConsentsBlock(data.signedConsents)
+  const consentsBlock = buildConsentsBlock(data.signedConsents, requiresInvasiveConsent(data))
   const closingDocBlock = buildClosingDocBlock(data.treatmentRendered, data.scheduledTreatment)
   const postOpBlock = closingDocBlock ? '' : buildPostOpBlock(data.treatmentRendered, data.scheduledTreatment)
 
