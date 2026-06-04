@@ -2,7 +2,7 @@
 // the check is relevant, evaluate(note, chart) returns { status, detail }.
 // status: 'pass' | 'fail' | 'warn' | 'na'. Only pass/fail count toward score.
 
-import { MEDICAL_NECESSITY_TEMPLATES } from '../src/data/examDefaults.js'
+import { MEDICAL_NECESSITY_TEMPLATES, detectDrugAllergyConflicts } from '../src/data/examDefaults.js'
 
 // Mirrors server/noteGenerator.js#requiresInvasiveConsent (kept inline so the rubric
 // stays free of server-side SDK imports). If you change one, change the other.
@@ -180,6 +180,39 @@ export const RUBRIC = [
       const flagged = m(note, /(no (?:signed )?(?:informed )?consent[^.]{0,120}(?:on file|in the chart|located|found|documented|addendum|signature|prior to finaliz|audit))|((?:addendum|signature|finaliz)[^.]{0,80}consent)|(consent[^.]{0,60}(?:not (?:on file|documented|located|found|signed)|gap|missing))/i)
       if (flagged) return { status: 'pass', detail: 'consent gap flagged for addendum' }
       return { status: 'fail', detail: 'invasive procedure documented but consent gap not flagged' }
+    }
+  },
+  {
+    name: 'drug_allergy_conflict',
+    why: 'A documented allergy that conflicts with a drug recorded for the visit must be surfaced as a safety flag — naming both the allergy and the drug — never silently passed or papered over.',
+    applies: (c) => detectDrugAllergyConflicts(c).length > 0,
+    evaluate: (note, c) => {
+      const conflicts = detectDrugAllergyConflicts(c)
+      const flagWord = /(contraindicat|cross-react|reconcil|discrepan|potential (reaction|interaction|conflict|contraindication)|verif|caution|safety (concern|flag|alert)|should (not )?(be )?(verif|confirm|administ|avoid)|must (be )?(verif|confirm|reconcil)|flag)/i
+      const sentences = note.split(/(?<=[.;:\n])\s+/)
+      const hasAllergy = m(note, /allerg/i)
+      const unflagged = conflicts.filter((cf) => {
+        const drugRe = new RegExp('\\b' + cf.drug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i')
+        if (!drugRe.test(note)) return true // conflicting drug not even named
+        // Require a sentence that ties a flag word to either the drug or the allergy concept.
+        return !sentences.some((s) => flagWord.test(s) && (drugRe.test(s) || /allerg/i.test(s)))
+      })
+      // The conflict must be surfaced as UNRESOLVED. Asserting it was cleared/tolerated/safe is a
+      // fabrication (no such data exists) and a false reassurance — fail it even if "flagged".
+      const fabricatedClearance = m(
+        note,
+        /((cross-react\w*|allerg\w*|contraindication)[^.]{0,70}(was|were|is|are|been)?\s*(cleared|ruled out|deemed safe|deemed appropriate|resolved|not a concern|no concern|not clinically significant)|tolerated[^.]{0,40}without (any )?(reaction|incident|adverse)|no contraindication (exists|is present|was identified|noted))/i
+      )
+      if (fabricatedClearance) {
+        return { status: 'fail', detail: 'allergy conflict asserted cleared/tolerated (fabrication — must surface as unresolved)' }
+      }
+      if (unflagged.length === 0 && hasAllergy) {
+        return { status: 'pass', detail: 'allergy–drug conflict flagged for verification' }
+      }
+      return {
+        status: 'fail',
+        detail: 'drug–allergy conflict not surfaced: ' + (unflagged.map((u) => `${u.allergen}↔${u.drug}`).join(', ') || 'no allergy mention')
+      }
     }
   },
   {

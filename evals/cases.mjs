@@ -1687,9 +1687,50 @@ export const SEED_CASES = [
       },
       "signedConsents": []
     }
-  }
-  // Known safety-probe cases NOT promoted (see evals/generated/cases-synthetic-batch3.json for the source). These exposed silent prompt gaps that no current rubric check enforces; promoting them would either flake (no deterministic enforcement) or freeze a known failure into the seed report. Tracked as TODOs:
-  //   b3-01/02 — drug-allergy/anesthetic-allergy conflict not enforced by a prompt rule
+  },
+  {
+    name: 'seed b3-01: PEN allergy + amoxicillin administered (drug-allergy conflict)',
+    chart: {
+      visitSetup: { patientType: 'adult', visitType: 'scheduled', visitDate: '2026-05-30', age: 44, provider: 'Dr. Garner' },
+      medicalHistory: { changesSinceLastVisit: false, allergies: ['Penicillin (rash)'], medications: 'amoxicillin 500mg TID x 7 days (just prescribed today)' },
+      scheduledTreatment: { procedures: [{
+        id: 'p1', type: 'filling', tooth: '30', material: 'Composite', surfaces: ['O'],
+        anestheticDrug: 'Septocaine (articaine) 4% with 1:200,000 epi', anestheticCarpules: 1, anestheticTechnique: 'Inferior alveolar nerve block',
+        isolation: 'Rubber dam', etchType: '37% phosphoric acid', etchTimeEnamel: 15, bondingAgent: 'Peak Universal Bond (Ultradent)',
+        msdsReviewed: true, cureTimeSec: 20, compositeProduct: 'Omnichroma packable', fieldIsolatedDry: true, occlusionAdjusted: true, additionalNotes: 'Rx amoxicillin written'
+      }] },
+      signedConsents: ['general', 'local_anesthesia']
+    }
+  },
+  {
+    name: 'seed b3-02: lidocaine allergy + lidocaine administered (drug-allergy conflict)',
+    chart: {
+      visitSetup: { patientType: 'adult', visitType: 'scheduled', visitDate: '2026-05-30', age: 38, provider: 'Dr. Garner' },
+      medicalHistory: { changesSinceLastVisit: false, allergies: ['Lidocaine (documented anaphylaxis)'] },
+      scheduledTreatment: { procedures: [{
+        id: 'p1', type: 'filling', tooth: '19', material: 'Composite', surfaces: ['O'],
+        anestheticDrug: 'Lidocaine 2% with 1:100,000 epi', anestheticCarpules: 2, anestheticTechnique: 'Inferior alveolar nerve block',
+        isolation: 'Cotton rolls / DriAngle', etchType: '37% phosphoric acid', etchTimeEnamel: 15, bondingAgent: 'Peak Universal Bond (Ultradent)',
+        msdsReviewed: true, cureTimeSec: 20, compositeProduct: 'Omnichroma packable', fieldIsolatedDry: true, occlusionAdjusted: true, additionalNotes: ''
+      }] },
+      signedConsents: ['general', 'local_anesthesia']
+    }
+  },
+  {
+    name: 'seed b3-NEG: lidocaine allergy + articaine (must NOT flag — different amide, low cross-reactivity)',
+    chart: {
+      visitSetup: { patientType: 'adult', visitType: 'scheduled', visitDate: '2026-05-30', age: 50, provider: 'Dr. Garner' },
+      medicalHistory: { changesSinceLastVisit: false, allergies: ['Lidocaine'] },
+      scheduledTreatment: { procedures: [{
+        id: 'p1', type: 'filling', tooth: '5', material: 'Composite', surfaces: ['O'],
+        anestheticDrug: 'Septocaine (articaine) 4% with 1:200,000 epi', anestheticCarpules: 1, anestheticTechnique: 'Infiltration',
+        isolation: 'Cotton rolls / DriAngle', etchType: '37% phosphoric acid', etchTimeEnamel: 15, bondingAgent: 'Peak Universal Bond (Ultradent)',
+        msdsReviewed: true, cureTimeSec: 20, compositeProduct: 'Omnichroma packable', fieldIsolatedDry: true, occlusionAdjusted: true, additionalNotes: ''
+      }] },
+      signedConsents: ['general', 'local_anesthesia']
+    }
+  },
+  // Known safety-probe cases NOT promoted (see git history / batch3 for the source). These exposed silent prompt gaps that no current rubric check enforces; promoting them would either flake (no deterministic enforcement) or freeze a known failure into the seed report. Tracked as TODOs:
   //   b3-04 — pregnancy + radiograph: no thyroid-collar/2nd-trimester rule
   //   b3-05 — bisphosphonate + extraction: no MRONJ-flag rule
   //   b3-06 — anticoagulant + extraction: no INR documentation rule

@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { buildMedicalNecessitySentences, CONSENTS } from '../src/data/examDefaults.js'
+import { buildMedicalNecessitySentences, CONSENTS, detectDrugAllergyConflicts } from '../src/data/examDefaults.js'
 
 const client = new Anthropic()
 
@@ -471,6 +471,22 @@ function buildClosingDocBlock(treatmentRendered, scheduledTreatment) {
   ].join('\n')
 }
 
+function buildDrugAllergyBlock(conflicts) {
+  if (!conflicts.length) return ''
+  const lines = conflicts.map(
+    (c) =>
+      `  - Documented allergy: "${c.allergen}" ↔ drug recorded (${c.source}): "${c.drug}" (${c.drugClass})${
+        c.severity === 'caution' ? ' [verify — lower-certainty/class-level match]' : ' [potential contraindication]'
+      }`
+  )
+  return [
+    'DRUG_ALLERGY_ALERT — the chart contains a documented drug allergy that conflicts with a drug recorded for this visit. This is a patient-safety flag and MUST be surfaced explicitly in the note. State it in the Subjective medical-history review (and, when a prescription is involved, also in the Plan). For EACH conflict below, write a clear sentence naming the documented allergy AND the conflicting drug, and state that this represents a potential contraindication the treating dentist must verify and reconcile before the record is finalized.',
+    'Hard prohibitions: do NOT assert that cross-reactivity was clinically cleared, that the drug was tolerated without reaction, that the allergy was ruled out, or that the conflict was otherwise resolved — none of that is in the data. Surface the discrepancy for the dentist to address; never paper over it or fabricate a clinical justification. Vary phrasing between regenerations.',
+    'Conflicts:',
+    ...lines
+  ].join('\n')
+}
+
 export function requiresInvasiveConsent(data) {
   const procs = data?.scheduledTreatment?.procedures || []
   if (procs.some((p) => ['extraction', 'endo', 'crown'].includes(p?.type))) return true
@@ -581,7 +597,9 @@ Rules:
 
 17. POST-OPERATIVE INSTRUCTIONS — when the user prompt contains a POSTOP_CONFIRMATION_REQUIRED line, the Plan section MUST conclude (or near-conclude, before the final next-step statement from rule #2) with exactly one natural sentence in prose confirming that post-operative care instructions were provided BOTH orally AND in writing, AND that the patient (or guardian/caregiver, when applicable) verbalized understanding of those instructions. The sentence must include all three concepts: oral delivery, written delivery, and the patient's expression of understanding. Vary the phrasing between regenerations (e.g., "Post-operative care instructions were reviewed verbally and provided in writing; the patient verbalized understanding." / "Both verbal and written post-operative instructions were given, and [PATIENT] indicated full understanding before being dismissed." / etc.). Do not list as a bullet. Do not omit any of the three concepts. When POSTOP_CONFIRMATION_REQUIRED is NOT present in the user prompt, do not add this sentence — it would be fabricated documentation.
 
-18. CLOSING DOCUMENTATION — when the user prompt contains a CLOSING_DOCUMENTATION_REQUIRED block (fired after definitive restorative, endodontic, crown & bridge, or removable-prosthesis procedures), follow that block's instructions exactly: conclude the Plan with a brief prose closing statement covering occlusion check, post-operative instructions (oral + written + verbalized understanding), risks reviewed, prognosis discussed, and — only when clinically indicated — a referral recommendation. This block SUPERSEDES rule #17: when CLOSING_DOCUMENTATION_REQUIRED is present, its post-op element is the only post-op confirmation needed; do not also emit a separate rule-#17 sentence. Vary clause order and phrasing between regenerations so the statement never reads as a fixed macro. When CLOSING_DOCUMENTATION_REQUIRED is NOT present, do not add this closing statement.`
+18. CLOSING DOCUMENTATION — when the user prompt contains a CLOSING_DOCUMENTATION_REQUIRED block (fired after definitive restorative, endodontic, crown & bridge, or removable-prosthesis procedures), follow that block's instructions exactly: conclude the Plan with a brief prose closing statement covering occlusion check, post-operative instructions (oral + written + verbalized understanding), risks reviewed, prognosis discussed, and — only when clinically indicated — a referral recommendation. This block SUPERSEDES rule #17: when CLOSING_DOCUMENTATION_REQUIRED is present, its post-op element is the only post-op confirmation needed; do not also emit a separate rule-#17 sentence. Vary clause order and phrasing between regenerations so the statement never reads as a fixed macro. When CLOSING_DOCUMENTATION_REQUIRED is NOT present, do not add this closing statement.
+
+19. DRUG-ALLERGY ALERT — when the user prompt contains a DRUG_ALLERGY_ALERT block, it has detected a documented allergy that conflicts with a drug recorded for this visit. Follow that block exactly: surface each conflict as an explicit patient-safety flag in the Subjective medical-history review (and in the Plan when a prescription is involved), naming both the allergy and the conflicting drug and stating it as a potential contraindication the treating dentist must verify and reconcile before finalizing the record. This is a hard requirement — do NOT omit it, do NOT bury it, and do NOT assert the conflict was clinically cleared, tolerated, or resolved (that would be fabricated). When DRUG_ALLERGY_ALERT is NOT present, do not invent allergy-conflict language.`
 
 export async function generateNote(rawData) {
   const data = sanitize(rawData)
@@ -595,11 +613,13 @@ export async function generateNote(rawData) {
   const consentsBlock = buildConsentsBlock(data.signedConsents, requiresInvasiveConsent(data))
   const closingDocBlock = buildClosingDocBlock(data.treatmentRendered, data.scheduledTreatment)
   const postOpBlock = closingDocBlock ? '' : buildPostOpBlock(data.treatmentRendered, data.scheduledTreatment)
+  const drugAllergyBlock = buildDrugAllergyBlock(detectDrugAllergyConflicts(data))
 
   const sections = (isScheduled
     ? [
         `VISIT: ${buildVisitNarrative(v)}`,
         `MEDICAL HISTORY: ${buildMedHx(data.medicalHistory || {})}`,
+        drugAllergyBlock,
         `PROCEDURES PERFORMED:\n${buildProcedures(data.scheduledTreatment) || 'None documented'}`,
         catchAllBlock,
         necessityBlock,
@@ -610,6 +630,7 @@ export async function generateNote(rawData) {
     : [
         `VISIT: ${buildVisitNarrative(v)}`,
         `MEDICAL HISTORY: ${buildMedHx(data.medicalHistory || {})}`,
+        drugAllergyBlock,
         `CHIEF COMPLAINT: ${buildCC(data.chiefComplaint || {})}`,
         isEpsdt ? `EPSDT SCREENING: ${buildEpsdt(data.epsdtScreening)}` : '',
         `SOFT TISSUE: ${buildSoftTissue(data.softTissue || {})}`,

@@ -29,6 +29,130 @@ export const ALLERGY_OPTIONS = [
   'Sulfa'
 ]
 
+// Drug–allergy conflict detection. Deliberately conservative: only high-confidence
+// same-drug or same-class matches are encoded, so the note flags a genuine
+// contraindication (e.g. penicillin allergy + amoxicillin, or lidocaine allergy +
+// lidocaine administered) without crying wolf on low-cross-reactivity pairings
+// (e.g. a lidocaine allergy does NOT flag articaine — different amide, commonly
+// chosen for exactly that reason; a penicillin allergy does NOT flag cephalosporins).
+// Used by both the note generator (to build the alert block) and the eval rubric.
+const ALLERGY_CONFLICT_RULES = [
+  {
+    allergen: /\b(penicillin|pcn|pen[ -]?vk?)\b/i,
+    conflicts: /\b(penicillin|pcn|pen[ -]?vk?|amoxicillin|amoxil|augmentin|amoxicillin[- ]clavulanate|ampicillin|dicloxacillin|nafcillin|oxacillin|piperacillin)\b/i,
+    drugClass: 'penicillin-class antibiotic',
+    severity: 'contraindication'
+  },
+  {
+    allergen: /\bamoxicillin\b|\bamoxil\b/i,
+    conflicts: /\b(amoxicillin|amoxil|augmentin|amoxicillin[- ]clavulanate|penicillin|ampicillin)\b/i,
+    drugClass: 'penicillin-class antibiotic',
+    severity: 'contraindication'
+  },
+  {
+    allergen: /\b(sulfa|sulfonamide)s?\b/i,
+    conflicts: /\b(sulfamethoxazole|bactrim|septra|tmp[- ]?smx|trimethoprim[- ]sulfamethoxazole|sulfasalazine|sulfadiazine)\b/i,
+    drugClass: 'sulfonamide antibiotic',
+    severity: 'contraindication'
+  },
+  {
+    allergen: /\b(aspirin|asa|acetylsalicylic)\b/i,
+    conflicts: /\b(aspirin|acetylsalicylic|asa)\b/i,
+    drugClass: 'salicylate',
+    severity: 'contraindication'
+  },
+  {
+    allergen: /\bnsaids?\b/i,
+    conflicts: /\b(ibuprofen|naproxen|ketorolac|toradol|diclofenac|celecoxib|aleve|advil|motrin|meloxicam)\b/i,
+    drugClass: 'NSAID',
+    severity: 'contraindication'
+  },
+  {
+    allergen: /\b(codeine|opioids?)\b/i,
+    conflicts: /\b(codeine|hydrocodone|oxycodone|tramadol|morphine|norco|vicodin|percocet)\b/i,
+    drugClass: 'opioid analgesic',
+    severity: 'contraindication'
+  },
+  {
+    allergen: /\b(lidocaine|xylocaine)\b/i,
+    conflicts: /\b(lidocaine|xylocaine)\b/i,
+    drugClass: 'lidocaine (amide local anesthetic)',
+    severity: 'contraindication'
+  },
+  {
+    allergen: /\b(articaine|septocaine)\b/i,
+    conflicts: /\b(articaine|septocaine)\b/i,
+    drugClass: 'articaine (amide local anesthetic)',
+    severity: 'contraindication'
+  },
+  {
+    allergen: /\b(mepivacaine|carbocaine|polocaine)\b/i,
+    conflicts: /\b(mepivacaine|carbocaine|polocaine)\b/i,
+    drugClass: 'mepivacaine (amide local anesthetic)',
+    severity: 'contraindication'
+  },
+  {
+    // Generic ester-anesthetic allergy cross-reacts within the ester class.
+    allergen: /\b(benzocaine|procaine|tetracaine|ester anesthetic)\b/i,
+    conflicts: /\b(benzocaine|procaine|tetracaine|cetacaine)\b/i,
+    drugClass: 'ester local anesthetic',
+    severity: 'contraindication'
+  },
+  {
+    // Vague "local anesthetic" allergy — flag any -caine for verification (lower certainty).
+    allergen: /\blocal anesthetic\b/i,
+    conflicts: /\b(lidocaine|articaine|septocaine|mepivacaine|prilocaine|bupivacaine|benzocaine|procaine|tetracaine)\b/i,
+    drugClass: 'local anesthetic',
+    severity: 'caution'
+  }
+]
+
+const NO_ALLERGY = /\b(nka|nkda|no known (drug )?allerg|none|denies)\b/i
+
+// Returns an array of detected conflicts: { allergen, drug, drugClass, severity, source }.
+// `allergen` is the original chart allergy string; `drug` is the matched drug token.
+export function detectDrugAllergyConflicts(data) {
+  const mh = data?.medicalHistory || {}
+  const allergies = (Array.isArray(mh.allergies) ? mh.allergies : []).filter(
+    (a) => typeof a === 'string' && a.trim() && !NO_ALLERGY.test(a)
+  )
+  if (!allergies.length) return []
+
+  // Collect every drug string recorded for this visit, tagged by source.
+  const drugSources = []
+  if (mh.medications && typeof mh.medications === 'string') {
+    drugSources.push({ text: mh.medications, source: 'current/prescribed medications' })
+  }
+  for (const p of data?.scheduledTreatment?.procedures || []) {
+    if (p?.anestheticDrug) drugSources.push({ text: p.anestheticDrug, source: 'anesthetic administered' })
+    if (p?.additionalNotes) drugSources.push({ text: p.additionalNotes, source: 'procedure notes' })
+  }
+
+  const conflicts = []
+  const seen = new Set()
+  for (const allergyStr of allergies) {
+    for (const rule of ALLERGY_CONFLICT_RULES) {
+      if (!rule.allergen.test(allergyStr)) continue
+      for (const ds of drugSources) {
+        const match = ds.text.match(rule.conflicts)
+        if (!match) continue
+        const key = `${allergyStr}|${rule.drugClass}|${match[0].toLowerCase()}|${ds.source}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        conflicts.push({
+          allergen: allergyStr.trim(),
+          drug: match[0],
+          drugClass: rule.drugClass,
+          severity: rule.severity,
+          source: ds.source
+        })
+      }
+    }
+  }
+  return conflicts
+}
+
+
 export const CC_TYPES = [
   { value: 'recall', label: 'Routine Recall/Preventive' },
   { value: 'pain', label: 'Pain/Discomfort' },
