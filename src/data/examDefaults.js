@@ -152,6 +152,75 @@ export function detectDrugAllergyConflicts(data) {
   return conflicts
 }
 
+// Dentition–age mismatch detection. Deliberately conservative: thresholds sit a
+// year or more below typical earliest eruption so early erupters never false-alarm,
+// and primary teeth only flag once the patient is past normal exfoliation age
+// (retained primary teeth are real — the flag asks the dentist to VERIFY rather
+// than asserting a charting error). The mixed-dentition window (~6–12) is silent
+// by design. Used by both the note generator and the eval rubric.
+const PERMANENT_MIN_ERUPTION_AGE = (() => {
+  const ages = {}
+  const set = (teeth, min) => teeth.forEach((t) => (ages[t] = min))
+  set([1, 16, 17, 32], 15) // third molars (~17–21)
+  set([2, 15, 18, 31], 10) // second molars (~11–13)
+  set([3, 14, 19, 30], 5) // first molars (~6)
+  set([4, 5, 12, 13, 20, 21, 28, 29], 8) // premolars (~10–12)
+  set([6, 11, 22, 27], 8) // canines (~9–12)
+  set([7, 10, 23, 26], 6) // lateral incisors (~7–9)
+  set([8, 9], 6) // maxillary central incisors (~7–8)
+  set([24, 25], 5) // mandibular central incisors (~6–7)
+  return ages
+})()
+
+const PRIMARY_RETAINED_FLAG_AGE = 13
+
+// Returns an array of detected mismatches: { tooth, source, issue, severity }.
+// Silent when age is not recorded — the detector never guesses.
+export function detectDentitionMismatches(data) {
+  const age = data?.visitSetup?.age
+  if (typeof age !== 'number' || !Number.isFinite(age)) return []
+
+  const toothSources = []
+  for (const p of data?.scheduledTreatment?.procedures || []) {
+    if (p?.tooth) toothSources.push({ tooth: p.tooth, source: 'scheduled procedure' })
+  }
+  for (const t of data?.treatmentRendered || []) {
+    for (const tooth of t?.teeth || []) toothSources.push({ tooth, source: `treatment rendered (${t.cdtCode || 'CDT'})` })
+  }
+  for (const t of data?.treatmentPlan || []) {
+    for (const tooth of t?.teeth || []) toothSources.push({ tooth, source: `treatment plan (${t.cdtCode || 'CDT'})` })
+  }
+  for (const [key, v] of Object.entries(data?.toothChart || {})) {
+    if (!(v?.conditions || []).length && !(v?.surfaces || []).length) continue
+    // An explicitly unerupted permanent tooth on a young chart is legitimate eruption monitoring.
+    if ((v?.conditions || []).includes('Unerupted/partially erupted')) continue
+    toothSources.push({ tooth: key, source: 'tooth chart' })
+  }
+
+  const flags = []
+  const seen = new Set()
+  for (const { tooth, source } of toothSources) {
+    const id = String(tooth).trim().replace(/^#/, '').toUpperCase()
+    let issue = null
+    if (/^[A-T]$/.test(id)) {
+      if (age >= PRIMARY_RETAINED_FLAG_AGE) {
+        issue = `primary tooth ${id} is charted but the recorded age is ${age} — past normal exfoliation; verify retained primary tooth vs charting error`
+      }
+    } else if (/^([1-9]|[12]\d|3[0-2])$/.test(id)) {
+      const minAge = PERMANENT_MIN_ERUPTION_AGE[Number(id)]
+      if (minAge != null && age < minAge) {
+        issue = `permanent tooth #${id} is charted but the recorded age is ${age}, below its plausible eruption age (~${minAge}+) — verify tooth identification vs charting error`
+      }
+    }
+    if (!issue) continue
+    const key = `${id}|${source}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    flags.push({ tooth: id, source, issue, severity: 'caution' })
+  }
+  return flags
+}
+
 
 export const CC_TYPES = [
   { value: 'recall', label: 'Routine Recall/Preventive' },
@@ -234,22 +303,59 @@ export const RADIOGRAPH_TYPES = [
   'Occlusal'
 ]
 
+// Grouped, multi-selectable. Radiographs.jsx is the only consumer.
 export const RADIOGRAPH_COMMON_REASONS = [
-  'High caries risk profile',
-  'Recall bitewing schedule (≥6 mo since last)',
-  'Pain in upper-right quadrant',
-  'Pain in upper-left quadrant',
-  'Pain in lower-right quadrant',
-  'Pain in lower-left quadrant',
-  'Localized swelling — evaluate suspected odontogenic source',
-  'Trauma evaluation',
-  'Follow-up post-treatment',
-  'New patient comprehensive evaluation',
-  'Suspected interproximal caries (clinical exam inconclusive)',
-  'Pre-extraction evaluation',
-  'Endodontic working-length confirmation',
-  'Post-endo / post-restoration verification',
-  'Evaluate developing dentition / eruption pattern'
+  {
+    category: 'Caries & recall',
+    items: [
+      'High caries risk profile',
+      'Recall bitewing schedule (≥6 mo since last)',
+      'Suspected interproximal caries (clinical exam inconclusive)',
+      'Recurrent caries / defective restoration evaluation',
+      'Caries depth / pulpal proximity assessment'
+    ]
+  },
+  {
+    category: 'Pain & swelling',
+    items: [
+      'Pain in upper-right quadrant',
+      'Pain in upper-left quadrant',
+      'Pain in lower-right quadrant',
+      'Pain in lower-left quadrant',
+      'Localized swelling — evaluate suspected odontogenic source',
+      'Trauma evaluation',
+      'Fracture / crack evaluation'
+    ]
+  },
+  {
+    category: 'Pre- & post-treatment',
+    items: [
+      'Pre-extraction evaluation',
+      'Endodontic working-length confirmation',
+      'Post-endo / post-restoration verification',
+      'Crown / bridge fit & margin verification',
+      'Implant site planning',
+      'Implant post-op verification'
+    ]
+  },
+  {
+    category: 'Perio & pathology',
+    items: [
+      'Periodontal bone-level assessment',
+      'Pathology follow-up / lesion surveillance',
+      'Third molar evaluation',
+      'TMJ / condyle evaluation'
+    ]
+  },
+  {
+    category: 'Growth & development',
+    items: [
+      'Evaluate developing dentition / eruption pattern',
+      'Orthodontic assessment',
+      'New patient comprehensive baseline',
+      'Follow-up post-treatment'
+    ]
+  }
 ]
 
 export const PEDIATRIC_PANO_INDICATIONS = [

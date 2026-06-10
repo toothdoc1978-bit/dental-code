@@ -35,7 +35,7 @@ export default function Radiographs({ store }) {
     if (exists) {
       setField('radiographs.taken', r.taken.filter((t) => t.type !== type))
     } else {
-      setField('radiographs.taken', [...r.taken, { type, reason: '', panoIndications: [] }])
+      setField('radiographs.taken', [...r.taken, { type, reasons: [], reason: '', panoIndications: [] }])
     }
   }
 
@@ -47,7 +47,17 @@ export default function Radiographs({ store }) {
     setField('radiographs.taken', r.taken.map((t) => (t.type === type ? { ...t, alaraCatchAllReason: value } : t)))
   }
 
-  const setQuickReason = (type, reason) => setReason(type, reason)
+  const toggleReason = (type, reason) => {
+    setField(
+      'radiographs.taken',
+      r.taken.map((t) => {
+        if (t.type !== type) return t
+        const list = t.reasons || []
+        const next = list.includes(reason) ? list.filter((x) => x !== reason) : [...list, reason]
+        return { ...t, reasons: next }
+      })
+    )
+  }
 
   const togglePanoIndication = (type, id) => {
     setField(
@@ -119,16 +129,27 @@ export default function Radiographs({ store }) {
                         className="input w-full min-h-[60px] mb-2"
                       />
                       {!showPanoChecklist && (
-                        <div className="flex flex-wrap gap-1">
-                          {RADIOGRAPH_COMMON_REASONS.map((q) => (
-                            <button
-                              key={q}
-                              type="button"
-                              onClick={() => setQuickReason(entry.type, q)}
-                              className="text-xs px-2 py-1 bg-slate-100 hover:bg-clinical-100 hover:text-clinical-700 text-slate-600 rounded"
-                            >
-                              + {q}
-                            </button>
+                        <div className="space-y-3 mt-1">
+                          {RADIOGRAPH_COMMON_REASONS.map((group) => (
+                            <details key={group.category} className="border border-slate-200 rounded">
+                              <summary className="cursor-pointer px-3 py-2 bg-slate-50 font-semibold text-sm text-slate-700">
+                                {group.category}
+                              </summary>
+                              <div className="p-3 space-y-1">
+                                {group.items.map((item) => {
+                                  const active = (entry.reasons || []).includes(item)
+                                  return (
+                                    <CheckChip
+                                      key={item}
+                                      active={active}
+                                      onClick={() => toggleReason(entry.type, item)}
+                                    >
+                                      <span className="text-xs">{item}</span>
+                                    </CheckChip>
+                                  )
+                                })}
+                              </div>
+                            </details>
                           ))}
                         </div>
                       )}

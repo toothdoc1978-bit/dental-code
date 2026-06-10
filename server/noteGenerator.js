@@ -1,5 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { buildMedicalNecessitySentences, CONSENTS, detectDrugAllergyConflicts } from '../src/data/examDefaults.js'
+import {
+  buildMedicalNecessitySentences,
+  CONSENTS,
+  detectDrugAllergyConflicts,
+  detectDentitionMismatches
+} from '../src/data/examDefaults.js'
 
 const client = new Anthropic()
 
@@ -363,6 +368,15 @@ function buildOcclusion(o) {
   return parts.join('; ') || 'Occlusion not documented'
 }
 
+function joinRationale(t) {
+  // The UI now produces a multi-select `reasons` array plus an optional free-text `reason`.
+  // Older payloads only have `reason`. Merge both so the prompt sees the full clinical rationale.
+  const list = Array.isArray(t.reasons) ? t.reasons.filter((x) => typeof x === 'string' && x.trim()) : []
+  const free = typeof t.reason === 'string' ? t.reason.trim() : ''
+  const all = [...list, ...(free ? [free] : [])]
+  return all.join('; ')
+}
+
 function buildRadiographs(r) {
   if (r.none) return 'No radiographs taken today'
   const parts = []
@@ -370,14 +384,15 @@ function buildRadiographs(r) {
     const entries = r.taken.map((t) => {
       if (typeof t === 'string') return t
       const usesCatchAll = (t.panoIndications || []).includes('alara-retake')
+      const rationale = joinRationale(t)
       if (usesCatchAll) {
         // The ALARA catch-all rationale is emitted in a separate CATCH_ALL block (below) so the model
         // can generate fresh phrasing each visit. Here we only acknowledge the entry, without including
         // the static template text the model could otherwise echo verbatim.
-        const stem = t.reason ? ` (additional rationale: ${t.reason})` : ''
+        const stem = rationale ? ` (additional rationale: ${rationale})` : ''
         return `${t.type}${stem} [ALARA catch-all justification — see ALARA_CATCH_ALL section]`
       }
-      const reason = t.reason ? ` (ALARA rationale: ${t.reason})` : ' (ALARA rationale NOT documented)'
+      const reason = rationale ? ` (ALARA rationale: ${rationale})` : ' (ALARA rationale NOT documented)'
       return `${t.type}${reason}`
     })
     parts.push(`Taken: ${entries.join('; ')}`)
@@ -468,6 +483,19 @@ function buildClosingDocBlock(treatmentRendered, scheduledTreatment) {
     '  4. PROGNOSIS — state that the prognosis for the treated tooth/teeth (or prosthesis) was discussed.',
     '  5. REFERRAL — include a referral recommendation ONLY if one is clinically indicated by the data; if no referral is indicated, omit this element entirely. Do not fabricate a referral and do not assert "no referral needed" unless the data supports it.',
     'Vary phrasing and clause order between regenerations so the closing statement does not read as a fixed macro. Elements 1–4 are mandatory; element 5 is conditional.'
+  ].join('\n')
+}
+
+function buildDentitionMismatchBlock(flags) {
+  if (!flags.length) return ''
+  const lines = flags.map(
+    (f) => `  - ${f.issue} (source: ${f.source})`
+  )
+  return [
+    'DENTITION_MISMATCH_FLAG — the chart contains tooth identifications that are inconsistent with the recorded patient age (a permanent tooth charted below its plausible eruption age, or a primary tooth charted past normal exfoliation). Surface each mismatch as a documentation flag in the Subjective medical-history / charting review section (or the Objective section if that fits the narrative better), naming the tooth and noting that the discrepancy should be verified — retained primary teeth and early erupters are real, so the goal is to prompt verification, not to assert a charting error.',
+    'Hard prohibitions: do NOT silently change the tooth identification, do NOT assert the chart is correct, and do NOT assert the chart is wrong — surface the inconsistency for the treating dentist to reconcile. Vary phrasing between regenerations.',
+    'Flagged inconsistencies:',
+    ...lines
   ].join('\n')
 }
 
@@ -599,7 +627,9 @@ Rules:
 
 18. CLOSING DOCUMENTATION — when the user prompt contains a CLOSING_DOCUMENTATION_REQUIRED block (fired after definitive restorative, endodontic, crown & bridge, or removable-prosthesis procedures), follow that block's instructions exactly: conclude the Plan with a brief prose closing statement covering occlusion check, post-operative instructions (oral + written + verbalized understanding), risks reviewed, prognosis discussed, and — only when clinically indicated — a referral recommendation. This block SUPERSEDES rule #17: when CLOSING_DOCUMENTATION_REQUIRED is present, its post-op element is the only post-op confirmation needed; do not also emit a separate rule-#17 sentence. Vary clause order and phrasing between regenerations so the statement never reads as a fixed macro. When CLOSING_DOCUMENTATION_REQUIRED is NOT present, do not add this closing statement.
 
-19. DRUG-ALLERGY ALERT — when the user prompt contains a DRUG_ALLERGY_ALERT block, it has detected a documented allergy that conflicts with a drug recorded for this visit. Follow that block exactly: surface each conflict as an explicit patient-safety flag in the Subjective medical-history review (and in the Plan when a prescription is involved), naming both the allergy and the conflicting drug and stating it as a potential contraindication the treating dentist must verify and reconcile before finalizing the record. This is a hard requirement — do NOT omit it, do NOT bury it, and do NOT assert the conflict was clinically cleared, tolerated, or resolved (that would be fabricated). When DRUG_ALLERGY_ALERT is NOT present, do not invent allergy-conflict language.`
+19. DRUG-ALLERGY ALERT — when the user prompt contains a DRUG_ALLERGY_ALERT block, it has detected a documented allergy that conflicts with a drug recorded for this visit. Follow that block exactly: surface each conflict as an explicit patient-safety flag in the Subjective medical-history review (and in the Plan when a prescription is involved), naming both the allergy and the conflicting drug and stating it as a potential contraindication the treating dentist must verify and reconcile before finalizing the record. This is a hard requirement — do NOT omit it, do NOT bury it, and do NOT assert the conflict was clinically cleared, tolerated, or resolved (that would be fabricated). When DRUG_ALLERGY_ALERT is NOT present, do not invent allergy-conflict language.
+
+20. DENTITION-MISMATCH FLAG — when the user prompt contains a DENTITION_MISMATCH_FLAG block, the chart contains a tooth identification that is inconsistent with the recorded patient age. Follow that block exactly: surface each flagged tooth as a documentation discrepancy that should be verified, naming the tooth and the age inconsistency. The natural home is the Subjective medical-history / charting review or the Objective hard-tissue findings — whichever fits the surrounding narrative. Do NOT silently re-letter or re-number the tooth, do NOT assert the chart is correct, and do NOT assert the chart is wrong (retained primary teeth and unusually early erupters are clinically real). When DENTITION_MISMATCH_FLAG is NOT present, do not invent dentition-mismatch language.`
 
 export async function generateNote(rawData) {
   const data = sanitize(rawData)
@@ -614,12 +644,14 @@ export async function generateNote(rawData) {
   const closingDocBlock = buildClosingDocBlock(data.treatmentRendered, data.scheduledTreatment)
   const postOpBlock = closingDocBlock ? '' : buildPostOpBlock(data.treatmentRendered, data.scheduledTreatment)
   const drugAllergyBlock = buildDrugAllergyBlock(detectDrugAllergyConflicts(data))
+  const dentitionMismatchBlock = buildDentitionMismatchBlock(detectDentitionMismatches(data))
 
   const sections = (isScheduled
     ? [
         `VISIT: ${buildVisitNarrative(v)}`,
         `MEDICAL HISTORY: ${buildMedHx(data.medicalHistory || {})}`,
         drugAllergyBlock,
+        dentitionMismatchBlock,
         `PROCEDURES PERFORMED:\n${buildProcedures(data.scheduledTreatment) || 'None documented'}`,
         catchAllBlock,
         necessityBlock,
@@ -631,6 +663,7 @@ export async function generateNote(rawData) {
         `VISIT: ${buildVisitNarrative(v)}`,
         `MEDICAL HISTORY: ${buildMedHx(data.medicalHistory || {})}`,
         drugAllergyBlock,
+        dentitionMismatchBlock,
         `CHIEF COMPLAINT: ${buildCC(data.chiefComplaint || {})}`,
         isEpsdt ? `EPSDT SCREENING: ${buildEpsdt(data.epsdtScreening)}` : '',
         `SOFT TISSUE: ${buildSoftTissue(data.softTissue || {})}`,

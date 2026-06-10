@@ -13,7 +13,8 @@
     "eval:seed": "node evals/run.mjs --seed-only",
     "eval:generate": "node evals/generate.mjs",
     "eval:coding": "node evals/coding-validation.test.mjs",
-    "eval:conflicts": "node evals/conflict-validation.test.mjs"
+    "eval:conflicts": "node evals/conflict-validation.test.mjs",
+    "eval:dentition": "node evals/dentition-validation.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
