@@ -35,6 +35,16 @@ function generateSubjective(visit: Visit): string {
     );
   }
 
+  const medications = visit.healthHistory.medications ?? [];
+  if (medications.length > 0) {
+    parts.push(`Current medications: ${medications.join(', ')}.`);
+  }
+
+  const allergies = visit.healthHistory.allergies ?? [];
+  if (allergies.length > 0) {
+    parts.push(`Allergies: ${allergies.join(', ')}.`);
+  }
+
   if (visit.healthHistory.riskFlags.length > 0) {
     parts.push(`Risk flags: ${visit.healthHistory.riskFlags.join(', ')}.`);
   }
@@ -217,17 +227,17 @@ function generateProcedureNarrative(visit: Visit, proc: Procedure): string {
   // Composite restoration
   if (cdt >= 'D2140' && cdt <= 'D2394') {
     const radSupport = getRadiographicSupport(visit, proc);
-    return `${toothStr}${surfStr} composite placed for ${describeCariesFinding(visit)}${radSupport}. Caries excavated, selective etch, bonding agent applied, composite placed and light-cured in increments. Contacts verified, occlusion adjusted. Patient tolerated well.`;
+    return `${toothStr}${surfStr} composite placed for ${describeCariesFinding(visit)}${radSupport}. Caries excavated, selective etch, bonding agent applied, composite placed and light-cured in increments. Contacts verified, occlusion adjusted. Pt tolerated well.`;
   }
 
   // Crown
   if (cdt >= 'D2740' && cdt <= 'D2799') {
-    return `${toothStr} crown preparation completed. Impressions taken, shade selected, temporary crown placed with temporary cement. Patient tolerated procedure well.`;
+    return `${toothStr} crown preparation completed. Impressions taken, shade selected, temporary crown placed with temporary cement. Pt tolerated procedure well.`;
   }
 
   // SRP
   if (cdt === 'D4341' || cdt === 'D4342') {
-    return `Scaling and root planing performed${toothStr ? ` in the area of ${toothStr}` : ''}. Subgingival calculus and biofilm removed with ultrasonic and hand instrumentation. Patient tolerated well.`;
+    return `Scaling and root planing performed${toothStr ? ` in the area of ${toothStr}` : ''}. Subgingival calculus and biofilm removed with ultrasonic and hand instrumentation. Pt tolerated well.`;
   }
 
   // Extraction
@@ -272,7 +282,7 @@ function generateProcedureNarrative(visit: Visit, proc: Procedure): string {
   }
 
   // Default
-  return `${proc.cdtDescription || cdt} performed${toothStr ? ` on ${toothStr}` : ''}. Patient tolerated well.`;
+  return `${proc.cdtDescription || cdt} performed${toothStr ? ` on ${toothStr}` : ''}. Pt tolerated well.`;
 }
 
 function describeCariesFinding(visit: Visit): string {

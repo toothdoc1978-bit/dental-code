@@ -26,6 +26,9 @@ export function createDefaultVisit(): Visit {
     healthHistory: {
       riskFlags: [],
       activeConditions: [],
+      medications: [],
+      allergies: [],
+      labs: {},
     },
     consent: [],
     anesthesia: [],

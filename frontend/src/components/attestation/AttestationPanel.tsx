@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Attestation } from '../../types/visit';
+import { Attestation, ContraindicationAlert } from '../../types/visit';
 
 interface Props {
   attestation?: Attestation;
   hasModifications: boolean;
   claimReadinessScore: number;
+  criticalAlerts: ContraindicationAlert[];
   onAttest: (provider: string, editsAfterAI: boolean) => void;
 }
 
@@ -12,14 +13,18 @@ export default function AttestationPanel({
   attestation,
   hasModifications,
   claimReadinessScore,
+  criticalAlerts,
   onAttest,
 }: Props) {
   const [confirmChecked, setConfirmChecked] = useState(false);
+  const [safetyAck, setSafetyAck] = useState(false);
 
   const isLocked = attestation?.locked === true;
+  const hasCritical = criticalAlerts.length > 0;
+  const canAttest = confirmChecked && (!hasCritical || safetyAck);
 
   const handleAttest = () => {
-    if (!confirmChecked) return;
+    if (!canAttest) return;
     onAttest('Dr. Chad Gardner', hasModifications);
   };
 
@@ -76,6 +81,33 @@ export default function AttestationPanel({
           </div>
         ) : (
           <div>
+            {/* Critical clinical safety alerts — must be acknowledged */}
+            {hasCritical && (
+              <div
+                style={{
+                  background: '#fee2e2',
+                  color: '#991b1b',
+                  padding: 10,
+                  borderRadius: 6,
+                  marginBottom: 12,
+                  fontSize: 13,
+                  border: '1px solid #dc2626',
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                  {'⛔'} {criticalAlerts.length} critical clinical safety alert
+                  {criticalAlerts.length !== 1 ? 's' : ''} unresolved
+                </div>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {criticalAlerts.map(a => (
+                    <li key={a.id}>
+                      {a.category}: {a.title}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Pre-attestation warnings */}
             {claimReadinessScore < 80 && (
               <div
@@ -128,6 +160,22 @@ export default function AttestationPanel({
               </ul>
             </div>
 
+            {hasCritical && (
+              <div className="form-checkbox-group" style={{ marginBottom: 12 }}>
+                <input
+                  type="checkbox"
+                  id="attest-safety-ack"
+                  checked={safetyAck}
+                  onChange={e => setSafetyAck(e.target.checked)}
+                />
+                <label htmlFor="attest-safety-ack" style={{ color: 'white', fontSize: 14 }}>
+                  I have reviewed the critical clinical safety alert
+                  {criticalAlerts.length !== 1 ? 's' : ''} above and addressed
+                  {criticalAlerts.length !== 1 ? ' them' : ' it'} clinically
+                </label>
+              </div>
+            )}
+
             <div className="form-checkbox-group" style={{ marginBottom: 16 }}>
               <input
                 type="checkbox"
@@ -145,7 +193,7 @@ export default function AttestationPanel({
               className="btn btn-success"
               style={{ width: '100%', padding: 12, fontSize: 15 }}
               onClick={handleAttest}
-              disabled={!confirmChecked}
+              disabled={!canAttest}
             >
               Attest & Lock Note
             </button>
