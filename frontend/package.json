@@ -26,6 +26,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "eval:safety": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON evals/run-safety-evals.mts",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {

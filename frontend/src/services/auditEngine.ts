@@ -3,7 +3,7 @@
 // Per Spec Sections 8 & 9
 // =============================================================================
 
-import { Visit, AuditRisk, ClaimReadiness, CheckItem, AttachmentItem, FrequencyCheck } from '../types/visit';
+import { Visit, AuditRisk, ClaimReadiness, CheckItem, AttachmentItem } from '../types/visit';
 
 // -- Claim Readiness Scoring --------------------------------------------------
 

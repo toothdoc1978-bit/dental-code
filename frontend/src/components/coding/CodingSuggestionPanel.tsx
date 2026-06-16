@@ -78,8 +78,6 @@ function generateSuggestions(
   // ---- Section 5.1: CDT code suggestions based on clinical findings --------
 
   for (const proc of procedures) {
-    const cdtInfo = CDT_CODE_MAP[proc.cdt];
-
     // Caries depth + composite procedure suggestions
     if (clinicalFindings.cariesDepth === 'dentin' && proc.cdt === 'D2391') {
       suggestions.push({

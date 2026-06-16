@@ -3,6 +3,7 @@ import { useVisit } from '../hooks/useVisit';
 import { SOAPNote } from '../types/visit';
 import { generateSOAPNote } from '../services/soapGenerator';
 import { calculateClaimReadiness, detectAuditRisks, getRecommendedAttachments } from '../services/auditEngine';
+import { detectContraindications } from '../services/contraindicationEngine';
 
 // Visit input panels
 import PatientPanel from '../components/visit/PatientPanel';
@@ -21,6 +22,7 @@ import CodingSuggestionPanel from '../components/coding/CodingSuggestionPanel';
 // Output panels
 import SOAPNotePanel from '../components/soap/SOAPNotePanel';
 import AuditRiskPanel from '../components/audit/AuditRiskPanel';
+import ContraindicationPanel from '../components/audit/ContraindicationPanel';
 import ClaimReadinessPanel from '../components/audit/ClaimReadinessPanel';
 import AttachmentPanel from '../components/audit/AttachmentPanel';
 import AttestationPanel from '../components/attestation/AttestationPanel';
@@ -73,6 +75,7 @@ export default function VisitWorkspace() {
   );
 
   const auditRisk = useMemo(() => detectAuditRisks(visit), [visit]);
+  const contraindications = useMemo(() => detectContraindications(visit), [visit]);
   const claimReadiness = useMemo(() => calculateClaimReadiness(visit), [visit]);
   const attachments = useMemo(() => getRecommendedAttachments(visit), [visit]);
 
@@ -202,6 +205,9 @@ export default function VisitWorkspace() {
 
         {/* RIGHT COLUMN — Intelligence panels (always visible) */}
         <div className="workspace-right">
+          {/* Clinical Safety — surface medical contraindications first */}
+          <ContraindicationPanel alerts={contraindications} />
+
           {/* Claim Readiness — always show */}
           <ClaimReadinessPanel readiness={claimReadiness} />
 
@@ -230,6 +236,7 @@ export default function VisitWorkspace() {
               attestation={visit.attestation}
               hasModifications={hasModifications}
               claimReadinessScore={claimReadiness.score}
+              criticalAlerts={contraindications.filter(a => a.severity === 'critical')}
               onAttest={attest}
             />
           )}
