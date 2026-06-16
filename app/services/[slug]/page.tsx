@@ -46,6 +46,64 @@ export default function ServiceDetailPage({ params }: Props) {
         </div>
       </section>
 
+      {service.tiers && service.tiers.length > 0 && (
+        <section className="container-page py-16">
+          <p className="eyebrow">Three ways to do dentures right</p>
+          <h2 className="mt-2 font-display text-3xl font-semibold text-ink sm:text-4xl">
+            Choose the tier that fits your smile.
+          </h2>
+          <p className="mt-3 max-w-2xl text-ink-muted">
+            Every denture we make is finished in our office. The tier you choose controls the
+            quality of the teeth, the level of cosmetic refinement, and whether your denture is
+            digitally archived for fast replacement.
+          </p>
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {service.tiers.map((tier, idx) => {
+              const isMid = idx === 1;
+              const isTop = idx === 2;
+              const cardClass = isTop
+                ? "rounded-2xl bg-brand-900 p-7 text-white shadow-soft ring-1 ring-brand-800"
+                : isMid
+                  ? "rounded-2xl bg-brand-50 p-7 shadow-soft ring-1 ring-brand-100"
+                  : "rounded-2xl bg-white p-7 shadow-soft ring-1 ring-brand-50";
+              const nameClass = isTop ? "text-white" : "text-ink";
+              const priceClass = isTop ? "text-brand-100" : "text-brand-700";
+              const taglineClass = isTop ? "text-brand-100" : "text-brand-700";
+              const bulletTextClass = isTop ? "text-brand-50" : "text-ink";
+              const bestForLabelClass = isTop ? "text-brand-200" : "text-ink-muted";
+              const bestForBodyClass = isTop ? "text-white" : "text-ink";
+              const bulletDotClass = isTop ? "bg-brand-300" : "bg-brand-500";
+              return (
+                <div key={tier.name} className={`flex h-full flex-col ${cardClass}`}>
+                  <h3 className={`font-display text-xl font-semibold ${nameClass}`}>{tier.name}</h3>
+                  <p className={`mt-1 font-display text-2xl font-semibold ${priceClass}`}>
+                    {tier.price}
+                  </p>
+                  <p className={`mt-4 text-sm italic ${taglineClass}`}>{tier.tagline}</p>
+                  <ul className="mt-5 space-y-2 text-sm">
+                    {tier.bullets.map((b) => (
+                      <li key={b} className={`flex items-start gap-3 ${bulletTextClass}`}>
+                        <span
+                          aria-hidden
+                          className={`mt-1.5 h-1.5 w-1.5 flex-none rounded-full ${bulletDotClass}`}
+                        />
+                        <span>{b}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-auto pt-6">
+                    <p className={`text-xs font-semibold uppercase tracking-wider ${bestForLabelClass}`}>
+                      Best for
+                    </p>
+                    <p className={`mt-1 text-sm ${bestForBodyClass}`}>{tier.bestFor}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <section className="container-page grid gap-12 py-16 md:grid-cols-[1.4fr_1fr]">
         <div>
           <p className="eyebrow">What it is</p>

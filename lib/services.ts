@@ -1,3 +1,11 @@
+export type ServiceTier = {
+  name: string;
+  price: string;
+  tagline: string;
+  bullets: string[];
+  bestFor: string;
+};
+
 export type Service = {
   slug: string;
   name: string;
@@ -8,6 +16,7 @@ export type Service = {
   process: { title: string; body: string }[];
   faqs: { q: string; a: string }[];
   relatedGallery: string[];
+  tiers?: ServiceTier[];
   iconKey:
     | "emergency"
     | "dentures"
@@ -73,11 +82,53 @@ export const services: Service[] = [
     name: "Dentures & Denture Repairs",
     iconKey: "dentures",
     short:
-      "Natural-looking full and partial dentures, premium dentures, repairs, and our exclusive Denture Insurance backup program.",
+      "Three tiers of natural-looking full and partial dentures — from a dependable $1,500 standard to a smile-designed cosmetic denture — plus repairs and our exclusive Denture Insurance backup.",
     hero:
       "Patients tell us our dentures don't look like dentures. We obsess over tooth shape, shade, and gumline so the result is comfortable, confident, and frequently complimented — and our in-office Denture Insurance program means a lost or broken denture can be replaced in 48 hours.",
     whatItIs:
-      "Premium full dentures starting at $1,500 per arch, partial dentures, denture repairs ($150–$350) for chipped teeth, broken plates, or replacement teeth, and our exclusive Denture Insurance backup program. Final cost depends on materials and complexity.",
+      "Full dentures across three tiers ($1,500 – $3,500 per arch), partial dentures starting at $1,200, denture repairs ($150–$350) for chipped teeth, broken plates, or replacement teeth, and our exclusive Denture Insurance backup program. Final cost depends on the tier you choose and the complexity of your case.",
+    tiers: [
+      {
+        name: "Standard Denture",
+        price: "Starting at $1,500 / arch",
+        tagline: "A well-made, comfortable denture that restores function and your smile.",
+        bullets: [
+          "Quality acrylic base with durable denture teeth",
+          "Designed and finished in our office, not outsourced",
+          "Comfortable fit with adjustments included",
+          "A solid choice for first-time wearers or as a reliable backup",
+        ],
+        bestFor:
+          "Patients who want a dependable, well-fitting denture at the most accessible price point.",
+      },
+      {
+        name: "Premium Esthetic Denture",
+        price: "$2,000 / arch",
+        tagline: "The denture most patients are talking about when they say \"you can't even tell.\"",
+        bullets: [
+          "Higher-grade teeth with natural translucency and lifelike shape",
+          "Custom shade and gumline matched to your face and skin tone",
+          "Refined contouring at the smile line for a natural look from every angle",
+          "Adjustments and shape refinements included",
+        ],
+        bestFor:
+          "Patients who want a denture that disappears in conversation and photographs.",
+      },
+      {
+        name: "Cosmetic Smile Denture",
+        price: "$2,500 – $3,500 / arch",
+        tagline: "Smile-design quality, indistinguishable from natural teeth — with a 48-hour backup built in.",
+        bullets: [
+          "Top-tier multilayer denture teeth (premium anterior esthetics)",
+          "Smile-design consultation: shape, length, and arrangement tailored to your face",
+          "Digital try-in and shape approval before final fabrication",
+          "Denture Insurance backup included — 48-hour 3D-printed replacement ($300 value)",
+          "All adjustments and refinements included",
+        ],
+        bestFor:
+          "Patients who want their denture to look like the teeth they grew up with — and want a fast-replacement safety net.",
+      },
+    ],
     whoItsFor: [
       "Patients who need new full or partial dentures",
       "Existing denture wearers ready for an upgrade",
@@ -113,7 +164,7 @@ export const services: Service[] = [
       },
       {
         q: "How much do dentures cost?",
-        a: "Premium dentures start at $1,500 per arch. Final cost depends on materials, the complexity of the case, and any preliminary treatment that may be needed. We'll give you a clear estimate after the exam.",
+        a: "We offer three full-denture tiers: a Standard Denture starting at $1,500 per arch, a Premium Esthetic Denture at $2,000 per arch, and a Cosmetic Smile Denture at $2,500–$3,500 per arch (which includes our Denture Insurance backup program). Partial dentures start at $1,200. We'll walk you through the differences and give you a clear estimate after the exam.",
       },
     ],
     relatedGallery: ["case-01-full-mouth", "case-03-full-arch", "case-08-zirconia-restoration"],

@@ -30,10 +30,29 @@ export const pricing: PriceItem[] = [
       "Simple extractions start at $200 per tooth. Final cost depends on exam findings and treatment complexity.",
   },
   {
-    service: "Premium dentures",
-    price: "$1,500 per arch",
+    service: "Standard denture",
+    price: "Starting at $1,500 per arch",
     description:
-      "Premium dentures made with high-quality acrylics and natural-looking denture teeth to restore function and appearance.",
+      "A comfortable, well-fitting denture with durable teeth and an acrylic base, designed and finished in our office.",
+  },
+  {
+    service: "Premium esthetic denture",
+    price: "$2,000 per arch",
+    description:
+      "Higher-grade teeth with natural translucency, custom shade and gumline match, and refined contouring at the smile line.",
+  },
+  {
+    service: "Cosmetic smile denture",
+    price: "$2,500 – $3,500 per arch",
+    description:
+      "Top-tier denture teeth, smile-design consultation, digital try-in, and the Denture Insurance backup program included.",
+  },
+  {
+    service: "Partial denture",
+    // TODO: confirm partial denture starting price before launch
+    price: "Starting at $1,200",
+    description:
+      "Cast-frame or flexible partial to replace missing teeth while preserving the natural teeth you still have. Final cost depends on the number of teeth replaced and the materials chosen.",
   },
   {
     service: "Denture repairs",
