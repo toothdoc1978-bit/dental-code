@@ -22,6 +22,9 @@ contraindications (the kind that don't show up in billing/claim checks).
 
 ## Current cases
 
+The five source "trap" cases plus 12 held-out / negative-control probes
+(17 total). Source cases (`SYN-*`):
+
 | Case | Trap | Rule fired |
 |------|------|------------|
 | SYN-001 | Bisphosphonate (Fosamax) → MRONJ | `mronj-antiresorptive` (critical) |
@@ -30,10 +33,26 @@ contraindications (the kind that don't show up in billing/claim checks).
 | SYN-004 | Type 2 diabetes, HbA1c 9.8% → healing | `diabetes-glycemic` (critical) |
 | SYN-005 | Pregnancy, 3rd trimester → NSAID | `pregnancy-nsaid` (critical) |
 
-The engine is intentionally severity-graded — e.g. warfarin without a
-supratherapeutic INR is a *warning*, not *critical*; well-controlled diabetes
-produces no alert. Those boundaries are pinned by the unit tests so future rule
-edits don't silently over- or under-fire.
+The `EDGE-*` / `NEG-*` cases probe beyond the tuned set: alternative drugs
+(denosumab, DOACs), boundaries (INR 3.2, HbA1c 8.2, 2nd-trimester), and
+false-positive guards (statin-only, latex/sulfa allergy, controlled diabetes,
+a penicillin on the med list without an allergy).
+
+The engine is intentionally severity-graded, and those boundaries are pinned
+by the cases so future rule edits don't silently over- or under-fire. Probing
+beyond the source cases is what caught two real defects, now fixed:
+
+- DOAC/heparin patients were being told to "obtain an INR" — but DOACs are not
+  INR-monitored. INR now only drives *warfarin* severity.
+- A warfarin INR of 3.0–3.5 with planned surgery was flagged *critical*; simple
+  extractions are generally safe below ~3.5 with local hemostasis, so critical
+  is reserved for supratherapeutic INR (≥3.5).
+
+## At the point of sign-off
+
+Critical alerts aren't just advisory: `AttestationPanel` lists any unresolved
+critical contraindications and requires an explicit acknowledgment before a
+note can be attested and locked.
 
 ## How alerts reach the clinician
 

@@ -35,6 +35,16 @@ function generateSubjective(visit: Visit): string {
     );
   }
 
+  const medications = visit.healthHistory.medications ?? [];
+  if (medications.length > 0) {
+    parts.push(`Current medications: ${medications.join(', ')}.`);
+  }
+
+  const allergies = visit.healthHistory.allergies ?? [];
+  if (allergies.length > 0) {
+    parts.push(`Allergies: ${allergies.join(', ')}.`);
+  }
+
   if (visit.healthHistory.riskFlags.length > 0) {
     parts.push(`Risk flags: ${visit.healthHistory.riskFlags.join(', ')}.`);
   }
