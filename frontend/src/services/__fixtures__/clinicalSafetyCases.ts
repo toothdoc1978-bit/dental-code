@@ -315,6 +315,39 @@ export const ROBUSTNESS_CASES: SafetyEvalCase[] = [
     }),
     expectAbsent: ['allergy-penicillin'],
   },
+  {
+    caseId: 'NEG-06',
+    category: 'Negative control — benign polypharmacy',
+    summary: 'Common chronic meds (statin, ACE inhibitor, thyroid, PPI) carry no dental contraindication.',
+    visit: makeVisit({
+      name: 'NEG-06',
+      age: 64,
+      chiefComplaint: 'Routine cleaning',
+      health: {
+        activeConditions: ['Hypertension', 'Hypothyroidism', 'GERD', 'High cholesterol'],
+        medications: ['Lisinopril', 'Levothyroxine', 'Omeprazole', 'Atorvastatin'],
+        allergies: ['NKDA'],
+      },
+    }),
+    expectNoCritical: true,
+    expectAbsent: [
+      'mronj-antiresorptive', 'bleeding-anticoagulant', 'allergy-penicillin',
+      'diabetes-glycemic', 'pregnancy-nsaid',
+    ],
+  },
+  {
+    caseId: 'NEG-07',
+    category: 'Negative control — low-dose aspirin only',
+    summary: 'Low-dose aspirin alone is not flagged as an anticoagulant bleeding risk.',
+    visit: makeVisit({
+      name: 'NEG-07',
+      age: 59,
+      chiefComplaint: 'Crown prep',
+      health: { activeConditions: ['Coronary artery disease'], medications: ['Aspirin 81mg'] },
+    }),
+    expectNoCritical: true,
+    expectAbsent: ['bleeding-anticoagulant'],
+  },
 ];
 
 /** Every case the loop enforces — source traps plus robustness probes. */
