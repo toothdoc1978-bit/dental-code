@@ -236,6 +236,7 @@ export default function VisitWorkspace() {
               attestation={visit.attestation}
               hasModifications={hasModifications}
               claimReadinessScore={claimReadiness.score}
+              criticalAlerts={contraindications.filter(a => a.severity === 'critical')}
               onAttest={attest}
             />
           )}
