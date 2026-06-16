@@ -86,7 +86,7 @@ export const services: Service[] = [
     hero:
       "Patients tell us our dentures don't look like dentures. We obsess over tooth shape, shade, and gumline so the result is comfortable, confident, and frequently complimented — and our in-office Denture Insurance program means a lost or broken denture can be replaced in 48 hours.",
     whatItIs:
-      "Full dentures across three tiers ($1,500 – $3,500 per arch), partial dentures starting at $1,200, denture repairs ($150–$350) for chipped teeth, broken plates, or replacement teeth, and our exclusive Denture Insurance backup program. Final cost depends on the tier you choose and the complexity of your case.",
+      "Full dentures across three tiers ($1,500 – $3,500 per arch), partial dentures starting at $600, denture repairs ($150–$350) for chipped teeth, broken plates, or replacement teeth, and our exclusive Denture Insurance backup program. Final cost depends on the tier you choose and the complexity of your case.",
     tiers: [
       {
         name: "Standard Denture",
@@ -164,7 +164,7 @@ export const services: Service[] = [
       },
       {
         q: "How much do dentures cost?",
-        a: "We offer three full-denture tiers: a Standard Denture starting at $1,500 per arch, a Premium Esthetic Denture at $2,000 per arch, and a Cosmetic Smile Denture at $2,500–$3,500 per arch (which includes our Denture Insurance backup program). Partial dentures start at $1,200. We'll walk you through the differences and give you a clear estimate after the exam.",
+        a: "We offer three full-denture tiers: a Standard Denture starting at $1,500 per arch, a Premium Esthetic Denture at $2,000 per arch, and a Cosmetic Smile Denture at $2,500–$3,500 per arch (which includes our Denture Insurance backup program). Partial dentures start at $600. We'll walk you through the differences and give you a clear estimate after the exam.",
       },
     ],
     relatedGallery: ["case-01-full-mouth", "case-03-full-arch", "case-08-zirconia-restoration"],

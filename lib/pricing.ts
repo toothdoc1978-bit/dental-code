@@ -49,8 +49,7 @@ export const pricing: PriceItem[] = [
   },
   {
     service: "Partial denture",
-    // TODO: confirm partial denture starting price before launch
-    price: "Starting at $1,200",
+    price: "Starting at $600",
     description:
       "Cast-frame or flexible partial to replace missing teeth while preserving the natural teeth you still have. Final cost depends on the number of teeth replaced and the materials chosen.",
   },
