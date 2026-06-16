@@ -85,6 +85,15 @@ export interface VitalityResult {
 export interface HealthHistory {
   riskFlags: string[];
   activeConditions: string[];
+  medications?: string[];          // current systemic medications
+  allergies?: string[];            // drug/material allergies
+  labs?: LabValues;                // relevant lab values
+  pregnancyTrimester?: 1 | 2 | 3;  // set when patient is pregnant
+}
+
+export interface LabValues {
+  inr?: number;     // International Normalized Ratio — anticoagulation status
+  hba1c?: number;   // Glycated hemoglobin (percent) — glycemic control
 }
 
 // -- Consent ------------------------------------------------------------------
@@ -162,6 +171,19 @@ export interface AuditRisk {
   level: 'low' | 'medium' | 'high';
   factors: string[];
   recommendations: string[];
+}
+
+// -- Clinical Safety / Contraindications --------------------------------------
+export type ContraindicationSeverity = 'critical' | 'warning' | 'info';
+
+export interface ContraindicationAlert {
+  id: string;                       // stable rule id, e.g. 'mronj-antiresorptive'
+  severity: ContraindicationSeverity;
+  category: string;                 // e.g. 'MRONJ Risk', 'Bleeding Risk'
+  title: string;
+  detail: string;                   // why this was flagged
+  recommendation: string;           // safe alternative / required action
+  triggers: string[];               // the specific inputs that triggered the rule
 }
 
 // -- Claim Readiness ----------------------------------------------------------
