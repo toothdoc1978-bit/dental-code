@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { detectContraindications, highestSeverity } from './contraindicationEngine';
-import { SAFETY_CASES } from './__fixtures__/clinicalSafetyCases';
+import { SAFETY_CASES, ALL_CASES } from './__fixtures__/clinicalSafetyCases';
 import type { Visit, HealthHistory, Procedure } from '../types/visit';
 
 function visit(health: Partial<HealthHistory>, procedures: Procedure[] = []): Visit {
@@ -27,20 +27,28 @@ function visit(health: Partial<HealthHistory>, procedures: Procedure[] = []): Vi
 const extraction = (): Procedure => ({ id: 'p', cdt: 'D7140', tooth: 30, surfaces: [], icd10: '', procFields: {} });
 
 describe('clinical safety eval cases', () => {
-  it.each(SAFETY_CASES.map(c => [c.caseId, c] as const))(
-    '%s surfaces the expected contraindication',
+  it.each(ALL_CASES.map(c => [c.caseId, c] as const))(
+    '%s matches its expected contraindications',
     (caseId, c) => {
       expect(c.caseId).toBe(caseId);
       const alerts = detectContraindications(c.visit);
-      for (const expected of c.expect) {
-        const got = alerts.find(a => a.id === expected.id);
+      const byId = new Map(alerts.map(a => [a.id, a]));
+
+      for (const expected of c.expect ?? []) {
+        const got = byId.get(expected.id);
         expect(got).toBeDefined();
         expect(got!.severity).toBe(expected.severity);
+      }
+      for (const absentId of c.expectAbsent ?? []) {
+        expect(byId.has(absentId)).toBe(false);
+      }
+      if (c.expectNoCritical) {
+        expect(alerts.some(a => a.severity === 'critical')).toBe(false);
       }
     }
   );
 
-  it('flags every trap case at critical severity', () => {
+  it('flags every source trap case at critical severity', () => {
     for (const c of SAFETY_CASES) {
       expect(highestSeverity(detectContraindications(c.visit))).toBe('critical');
     }
@@ -59,6 +67,18 @@ describe('contraindication engine — behavior', () => {
 
     const critical = detectContraindications(visit({ medications: ['Warfarin'], labs: { inr: 3.8 } }, [extraction()]));
     expect(critical.find(a => a.id === 'bleeding-anticoagulant')!.severity).toBe('critical');
+  });
+
+  it('does not tell DOAC patients to obtain an INR', () => {
+    const doac = detectContraindications(visit({ medications: ['Eliquis (apixaban)'] }, [extraction()]));
+    const rec = doac.find(a => a.id === 'bleeding-anticoagulant')!.recommendation.toLowerCase();
+    expect(rec).toContain('not monitored by inr');
+    expect(rec).not.toContain('obtain an inr');
+  });
+
+  it('keeps therapeutic warfarin (INR < 3.5) with surgery at warning, not critical', () => {
+    const alerts = detectContraindications(visit({ medications: ['Warfarin'], labs: { inr: 3.2 } }, [extraction()]));
+    expect(alerts.find(a => a.id === 'bleeding-anticoagulant')!.severity).toBe('warning');
   });
 
   it('does not flag well-controlled diabetes as critical', () => {

@@ -13,7 +13,7 @@
 // =============================================================================
 
 import { detectContraindications } from '../src/services/contraindicationEngine.ts';
-import { SAFETY_CASES } from '../src/services/__fixtures__/clinicalSafetyCases.ts';
+import { ALL_CASES, type SafetyEvalCase } from '../src/services/__fixtures__/clinicalSafetyCases.ts';
 
 const GREEN = '\x1b[32m';
 const RED = '\x1b[31m';
@@ -21,49 +21,53 @@ const DIM = '\x1b[2m';
 const BOLD = '\x1b[1m';
 const RESET = '\x1b[0m';
 
-let passed = 0;
-const failures: string[] = [];
+function check(c: SafetyEvalCase): string[] {
+  const alerts = detectContraindications(c.visit);
+  const byId = new Map(alerts.map(a => [a.id, a]));
+  const problems: string[] = [];
+
+  for (const e of c.expect ?? []) {
+    const got = byId.get(e.id);
+    if (!got) problems.push(`expected '${e.id}' (${e.severity}) — not produced`);
+    else if (got.severity !== e.severity) problems.push(`'${e.id}' was ${got.severity}, expected ${e.severity}`);
+  }
+  for (const id of c.expectAbsent ?? []) {
+    if (byId.has(id)) problems.push(`'${id}' fired but should be absent`);
+  }
+  if (c.expectNoCritical) {
+    const crit = alerts.filter(a => a.severity === 'critical').map(a => a.id);
+    if (crit.length) problems.push(`unexpected critical: ${crit.join(', ')}`);
+  }
+  return problems;
+}
 
 console.log(`\n${BOLD}Clinical Safety Eval — contraindication engine${RESET}\n`);
 
-for (const c of SAFETY_CASES) {
-  const alerts = detectContraindications(c.visit);
-  const byId = new Map(alerts.map(a => [a.id, a]));
+let passed = 0;
+const failures: string[] = [];
 
-  const missing = c.expect.filter(e => {
-    const got = byId.get(e.id);
-    return !got || got.severity !== e.severity;
-  });
-
-  const ok = missing.length === 0;
+for (const c of ALL_CASES) {
+  const problems = check(c);
+  const ok = problems.length === 0;
   if (ok) passed++;
 
   const mark = ok ? `${GREEN}PASS${RESET}` : `${RED}FAIL${RESET}`;
-  console.log(`${mark}  ${c.caseId}  ${DIM}${c.category}${RESET}`);
-
-  if (ok) {
-    for (const e of c.expect) {
-      const got = byId.get(e.id)!;
-      console.log(`        → [${got.severity.toUpperCase()}] ${got.category}: ${got.title}`);
+  console.log(`${mark}  ${c.caseId.padEnd(8)} ${DIM}${c.category}${RESET}`);
+  if (!ok) {
+    for (const p of problems) {
+      console.log(`        ${RED}✗ ${p}${RESET}`);
+      failures.push(`${c.caseId}: ${p}`);
     }
-  } else {
-    for (const m of missing) {
-      const got = byId.get(m.id);
-      const reason = got
-        ? `severity ${got.severity} (expected ${m.severity})`
-        : 'not produced';
-      console.log(`        ${RED}✗ expected '${m.id}' (${m.severity}) — ${reason}${RESET}`);
-      failures.push(`${c.caseId}: ${m.id}`);
-    }
-    console.log(`        ${DIM}engine produced: ${alerts.map(a => `${a.id}(${a.severity})`).join(', ') || 'none'}${RESET}`);
+    const produced = detectContraindications(c.visit).map(a => `${a.id}(${a.severity})`);
+    console.log(`        ${DIM}produced: ${produced.join(', ') || 'none'}${RESET}`);
   }
 }
 
-const total = SAFETY_CASES.length;
+const total = ALL_CASES.length;
 const color = passed === total ? GREEN : RED;
 console.log(`\n${color}${BOLD}${passed}/${total} cases passed${RESET}\n`);
 
 if (passed !== total) {
-  console.error(`Missed: ${failures.join(', ')}`);
+  console.error(`Missed:\n  ${failures.join('\n  ')}`);
   process.exit(1);
 }

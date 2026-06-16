@@ -29,6 +29,9 @@ const ANTICOAGULANT = [
   'edoxaban', 'savaysa', 'enoxaparin', 'lovenox', 'heparin',
 ];
 
+// INR only reflects warfarin status; DOACs and heparins are not INR-monitored.
+const WARFARIN = ['warfarin', 'coumadin', 'jantoven'];
+
 const ANTIPLATELET = ['clopidogrel', 'plavix', 'ticagrelor', 'brilinta', 'prasugrel', 'effient'];
 
 const BLEEDING_DISORDER = ['bleeding disorder', 'hemophilia', 'thrombocytopenia', 'von willebrand'];
@@ -106,11 +109,13 @@ export function detectContraindications(visit: Visit): ContraindicationAlert[] {
 
   // -- Rule 2: Anticoagulant / bleeding risk ---------------------------------
   const anticoag = matches(medsAndFlags, ANTICOAGULANT);
+  const onWarfarin = matches(medsAndFlags, WARFARIN);
   const antiplatelet = matches(medsAndFlags, ANTIPLATELET);
   const bleedingDisorder = matches([...flags, ...conditions], BLEEDING_DISORDER);
   if (anticoag.length > 0 || antiplatelet.length > 0 || bleedingDisorder.length > 0) {
     const surgery = procedures.filter(isInvasive);
     const inr = labs.inr;
+    const nonWarfarinAnticoag = anticoag.filter(a => !onWarfarin.includes(a));
     const sources = [...anticoag, ...antiplatelet, ...bleedingDisorder];
     const triggers = [...sources, ...(inr !== undefined ? [`INR ${inr}`] : [])];
 
@@ -118,29 +123,43 @@ export function detectContraindications(visit: Visit): ContraindicationAlert[] {
     let detail: string;
     let recommendation: string;
 
-    if (anticoag.length > 0 && inr !== undefined && inr >= 3.5) {
+    // Critical only when warfarin INR is supratherapeutic — simple extractions
+    // are generally safe below ~3.5 with local hemostatic measures. INR is not
+    // meaningful for DOACs/heparins, so it never drives their severity.
+    if (onWarfarin.length > 0 && inr !== undefined && inr >= 3.5) {
       severity = 'critical';
       detail =
-        `INR is supratherapeutic at ${inr} on anticoagulant therapy (${anticoag.join(', ')}). ` +
-        'Extractions or surgery today carry a severe bleeding risk.';
+        `INR is supratherapeutic at ${inr} on warfarin (${onWarfarin.join(', ')}). ` +
+        'Extractions or oral surgery today carry a severe bleeding risk.';
       recommendation =
-        'Do not perform extractions or oral surgery today. Obtain physician consult to address the elevated INR; ' +
+        'Do not perform extractions or oral surgery today. Obtain physician consult to correct the elevated INR; ' +
         'if treatment is urgent, coordinate INR correction and use local hemostatic measures (sutures, oxidized cellulose, tranexamic acid rinse).';
     } else if (surgery.length > 0) {
-      severity = inr !== undefined && inr >= 3.0 ? 'critical' : 'warning';
+      severity = 'warning';
       detail =
         `Invasive procedure planned (${surgery.map(p => p.cdt).join(', ')}) for a patient on ${sources.join(', ')}. ` +
         (inr !== undefined ? `Most recent INR ${inr}.` : 'No recent INR on file.');
-      recommendation =
-        anticoag.length > 0 && inr === undefined
-          ? 'Obtain an INR within 24h before any extraction. Plan local hemostatic measures. Do not interrupt anticoagulation without physician guidance.'
-          : 'Proceed only with INR in an acceptable range (generally ≤3.0–3.5) and local hemostatic measures in place.';
+      if (onWarfarin.length > 0 && inr === undefined) {
+        recommendation =
+          'Obtain an INR within 24h before extraction — simple extractions are generally safe at INR <3.5 with local hemostatic measures. ' +
+          'Do not interrupt anticoagulation without physician guidance.';
+      } else if (nonWarfarinAnticoag.length > 0) {
+        recommendation =
+          'Direct oral anticoagulants and heparins are not monitored by INR. Coordinate timing of the last dose (or a brief interruption) ' +
+          'with the prescribing physician and use local hemostatic measures.';
+      } else {
+        recommendation =
+          'Plan local hemostatic measures (sutures, oxidized cellulose, tranexamic acid rinse) before any invasive procedure.';
+      }
     } else {
       severity = 'warning';
-      detail = `Patient on anticoagulant/antiplatelet therapy or has a bleeding disorder (${sources.join(', ')}).` +
+      detail =
+        `Patient on anticoagulant/antiplatelet therapy or has a bleeding disorder (${sources.join(', ')}).` +
         (inr !== undefined ? ` INR ${inr}.` : '');
       recommendation =
-        'Verify a recent INR (if on warfarin) and plan local hemostatic measures before any invasive procedure.';
+        onWarfarin.length > 0
+          ? 'Verify a recent INR before any invasive procedure and plan local hemostatic measures.'
+          : 'Plan local hemostatic measures before any invasive procedure; coordinate anticoagulation management with the prescribing physician.';
     }
 
     alerts.push({
