@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { generateNote } from './noteGenerator.js'
+import intakeFetchHandler from '../api/intake-fetch.js'
 
 dotenv.config()
 
@@ -14,6 +15,8 @@ app.use(express.json({ limit: '50kb' }))
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, hasApiKey: !!process.env.ANTHROPIC_API_KEY })
 })
+
+app.all('/api/intake-fetch', (req, res) => intakeFetchHandler(req, res))
 
 app.post('/api/generate-note', async (req, res) => {
   try {

@@ -85,6 +85,22 @@ INTAKE_SHARED_SECRET=<HMAC secret shared with dental-intake-forms>
 
 The dental-code proxy at `/api/intake-fetch` signs every upstream call with `x-intake-signature: hex(HMAC_SHA256("/api/intake-fetch?code=ABCD-1234", INTAKE_SHARED_SECRET))` and recursively rejects any PHI key in the response. The store-side `applyFragment` reducer enforces the same PHI list, defense-in-depth.
 
+### Local preview with mock middleware
+
+To click through the full intake flow without standing up the producer repo:
+
+```bash
+npm run dev:intake
+```
+
+This boots Vite (5173) + Express (3001) + a dev-only mock producer on `:4000` (`scripts/dev-mock-intake.mjs`). The mock verifies the HMAC and serves three fixture codes:
+
+- `ABCD-1234` — adult with asthma + ADHD + penicillin allergy + amoxicillin med (trips the existing drug-allergy safety detector on note generation)
+- `PEDS-2025` — pediatric EPSDT with caries-risk pre-filled
+- `PHI0-LEAK` — fragment carrying a PHI key (verifies the 502 PHI-guard path)
+
+Any other code matching `ABCD-1234` regex returns 404 visit-not-found.
+
 ## Tech Stack
 
 - React 18 + Vite
