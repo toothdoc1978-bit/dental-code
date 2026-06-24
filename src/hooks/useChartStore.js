@@ -5,6 +5,36 @@ const STORAGE_KEY = 'dental-chart-state-v1'
 
 const union = (a, b) => Array.from(new Set([...(a || []), ...(b || [])]))
 
+const PHI_KEYS = ['patientName', 'name', 'dob', 'medicaidId', 'ssn', 'address', 'phone']
+
+const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
+const isEmptyScalar = (v) => v === null || v === undefined || v === ''
+
+function hasPhi(value) {
+  if (value === null || typeof value !== 'object') return false
+  if (Array.isArray(value)) return value.some(hasPhi)
+  for (const k of Object.keys(value)) {
+    if (PHI_KEYS.includes(k)) return true
+    if (hasPhi(value[k])) return true
+  }
+  return false
+}
+
+function mergeFragment(existing, incoming) {
+  if (Array.isArray(existing) && Array.isArray(incoming)) {
+    return union(existing, incoming)
+  }
+  if (isPlainObject(existing) && isPlainObject(incoming)) {
+    const out = { ...existing }
+    for (const k of Object.keys(incoming)) {
+      if (!(k in existing)) continue
+      out[k] = mergeFragment(existing[k], incoming[k])
+    }
+    return out
+  }
+  return isEmptyScalar(existing) ? incoming : existing
+}
+
 export const initialState = {
   visitSetup: {
     patientType: null,
@@ -146,6 +176,8 @@ function reducer(state, action) {
       return { ...state, generatedNote: action.note }
     case 'RESET_FORM':
       return { ...initialState, visitSetup: { ...initialState.visitSetup, visitDate: new Date().toISOString().slice(0, 10) } }
+    case 'APPLY_FRAGMENT':
+      return mergeFragment(state, action.fragment)
     case 'HYDRATE':
       return action.state
     default:
@@ -193,6 +225,12 @@ export function useChartStore() {
     localStorage.removeItem(STORAGE_KEY)
     dispatch({ type: 'RESET_FORM' })
   }, [])
+  const applyFragment = useCallback((fragment) => {
+    if (!isPlainObject(fragment)) return { ok: false, error: 'invalid-shape' }
+    if (hasPhi(fragment)) return { ok: false, error: 'disallowed-field' }
+    dispatch({ type: 'APPLY_FRAGMENT', fragment })
+    return { ok: true, mergedKeys: Object.keys(fragment) }
+  }, [])
 
-  return { state, setField, toggleItem, seedEpsdtDefaults, seedPediatricPerio, setStep, setGeneratedNote, resetForm }
+  return { state, setField, toggleItem, seedEpsdtDefaults, seedPediatricPerio, setStep, setGeneratedNote, resetForm, applyFragment }
 }

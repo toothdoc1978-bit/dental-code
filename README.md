@@ -72,6 +72,19 @@ EVAL_URL=https://dental-code.vercel.app/api/generate-note npm run eval:seed
 
 The app has **no fields for patient name, DOB, Medicaid ID, address, or phone**. The Express backend rejects any request containing PHI keys before forwarding to Claude. The generated note uses `[PATIENT]` placeholder — provider replaces it manually in Dentrix.
 
+## Intake Import
+
+The Visit Setup page has an **Import from intake form** button that pulls patient-supplied answers (medical history, chief complaint, consents) from the companion repo [`toothdoc1978-bit/dental-intake-forms`](https://github.com/toothdoc1978-bit/dental-intake-forms). Forms are completed at home on a HIPAA-tier Jotform; only de-identified clinical fields cross the boundary into dental-code. PHI (name, DOB, address, phone, insurance ID) stays in the Jotform vault under BAA and never touches Vercel.
+
+Clinician workflow: receive a visit code in the form `ABCD-1234` on the appointment card, open dental-code, click **Import from intake form**, enter the code. Empty chart fields fill in; clinician keystrokes are never overwritten. Two server-side env vars (set in Vercel Project Settings → Environment Variables, no `VITE_` prefix):
+
+```
+INTAKE_MIDDLEWARE_URL=https://intake-middleware.vercel.app
+INTAKE_SHARED_SECRET=<HMAC secret shared with dental-intake-forms>
+```
+
+The dental-code proxy at `/api/intake-fetch` signs every upstream call with `x-intake-signature: hex(HMAC_SHA256("/api/intake-fetch?code=ABCD-1234", INTAKE_SHARED_SECRET))` and recursively rejects any PHI key in the response. The store-side `applyFragment` reducer enforces the same PHI list, defense-in-depth.
+
 ## Tech Stack
 
 - React 18 + Vite
