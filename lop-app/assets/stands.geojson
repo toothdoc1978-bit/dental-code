@@ -1,0 +1,87 @@
+{
+  "type": "FeatureCollection",
+  "name": "lop_stands_sample",
+  "comment": "PLACEHOLDER sample data for Lookout Point, East Carroll Parish, LA. Replace with real digitized stand boundaries. Each feature MUST have properties.stand_id as an integer and a Polygon geometry whose coordinates are [longitude, latitude] pairs.",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "stand_id": 1, "name": "North Ridge" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-91.1840, 32.6260],
+            [-91.1810, 32.6260],
+            [-91.1810, 32.6235],
+            [-91.1840, 32.6235],
+            [-91.1840, 32.6260]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "stand_id": 2, "name": "Cypress Slough" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-91.1800, 32.6258],
+            [-91.1770, 32.6258],
+            [-91.1770, 32.6233],
+            [-91.1800, 32.6233],
+            [-91.1800, 32.6258]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "stand_id": 3, "name": "River Bend" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-91.1838, 32.6228],
+            [-91.1808, 32.6228],
+            [-91.1808, 32.6203],
+            [-91.1838, 32.6203],
+            [-91.1838, 32.6228]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "stand_id": 4, "name": "Hardwood Bottom" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-91.1798, 32.6226],
+            [-91.1768, 32.6226],
+            [-91.1768, 32.6201],
+            [-91.1798, 32.6201],
+            [-91.1798, 32.6226]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "stand_id": 5, "name": "South Field Edge" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-91.1818, 32.6198],
+            [-91.1788, 32.6198],
+            [-91.1788, 32.6173],
+            [-91.1818, 32.6173],
+            [-91.1818, 32.6198]
+          ]
+        ]
+      }
+    }
+  ]
+}

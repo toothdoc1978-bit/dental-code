@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// MVP rules: any signed-in member (including anonymous) can read all hunts and
+// create their own. A hunt can only be modified by the user who created it.
+// Tighten before production (e.g. require email-verified club members).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /hunts/{huntId} {
+      allow read: if request.auth != null;
+
+      // Check-in: must be active, owned by the caller, with a numeric standId.
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.active == true
+        && request.resource.data.standId is int;
+
+      // Check-out / edits: only the owner, and they can't change ownership.
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+
+      allow delete: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}

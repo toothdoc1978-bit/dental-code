@@ -1,0 +1,22 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+*.iml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Firebase — keep these private; each dev runs `flutterfire configure`
+# (firebase_options.dart ships as a placeholder and IS committed)
+google-services.json
+GoogleService-Info.plist
+.firebase/
+
+# OS
+.DS_Store
