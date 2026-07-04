@@ -1,0 +1,82 @@
+rules_version = '2';
+
+// Lookout Point club rules. Everyone signs in anonymously, so "auth != null"
+// means "someone running the club app" — trusted members, but the rules still
+// enforce data shape and ownership so a bug (or a curious kid with the phone)
+// can't corrupt club records:
+//  * hunts: create only as yourself, with valid fields; update only your own
+//    hunt and only the check-out fields; history is immutable otherwise.
+//  * standPositions: pins must be real stand-code docs with in-bounds coords.
+//  * forecast / riverStatus: single well-known cache docs with sane shapes.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Deer counts: null (non-deer hunts) or a sane non-negative integer.
+    function validCount(v) {
+      return v == null || (v is int && v >= 0 && v <= 500);
+    }
+
+    match /hunts/{huntId} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.active == true
+        && request.resource.data.standCode is string
+        && request.resource.data.standCode.size() >= 1
+        && request.resource.data.standCode.size() <= 4
+        && request.resource.data.huntType is string
+        && request.resource.data.huntType.size() <= 30
+        && request.resource.data.memberName is string
+        && request.resource.data.memberName.size() <= 60
+        // Deer counts are only recorded at check-out.
+        && request.resource.data.doeSeen == null
+        && request.resource.data.buckSeen == null
+        && request.resource.data.fawnSeen == null;
+
+      // Check-out: only the hunt's owner, only the check-out fields, and only
+      // while the hunt is still active (history can't be rewritten).
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && resource.data.active == true
+        && request.resource.data.active == false
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['active', 'checkOutTime', 'doeSeen', 'buckSeen', 'fawnSeen'])
+        && validCount(request.resource.data.doeSeen)
+        && validCount(request.resource.data.buckSeen)
+        && validCount(request.resource.data.fawnSeen);
+
+      allow delete: if false;
+    }
+
+    // Shared stand pin positions (doc id == stand code, e.g. "28" or "12B").
+    match /standPositions/{code} {
+      allow read: if request.auth != null;
+      allow delete: if request.auth != null;
+      allow create, update: if request.auth != null
+        && code.matches('[0-9]{1,2}B?')
+        && request.resource.data.x is number
+        && request.resource.data.x >= 0 && request.resource.data.x <= 1
+        && request.resource.data.y is number
+        && request.resource.data.y >= 0 && request.resource.data.y <= 1;
+    }
+
+    // Shared weather forecast cache (single doc: forecast/today).
+    match /forecast/{doc} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && doc == 'today'
+        && request.resource.data.fetchedAt is timestamp
+        && request.resource.data.hours is list
+        && request.resource.data.hours.size() <= 48;
+    }
+
+    // Shared river snapshot cache (single doc: riverStatus/current).
+    match /riverStatus/{doc} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && doc == 'current'
+        && request.resource.data.fetchedAt is timestamp;
+    }
+  }
+}
