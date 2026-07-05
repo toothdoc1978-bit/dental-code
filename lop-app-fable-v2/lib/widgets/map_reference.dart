@@ -179,10 +179,15 @@ class _ScentPanel extends ConsumerWidget {
   }
 
   String _regime(double windMph, double tempDelta) {
-    if (windMph > 5) return 'true wind dominates';
-    if (tempDelta < 0) return 'evening thermal — sinking toward drainage';
-    if (tempDelta > 0) return 'morning thermal — rising & dispersing';
-    return 'slack air';
+    final w = thermalWeight(windMph);
+    if (w == 0) return 'true wind dominates';
+    final thermal = tempDelta < 0
+        ? 'sinking toward drainage'
+        : tempDelta > 0
+            ? 'rising & dispersing'
+            : 'slack air';
+    if (tempDelta == 0 && w == 1) return 'slack air';
+    return w == 1 ? 'thermal — $thermal' : 'wind + thermal mix — $thermal';
   }
 
   String _fmtHour(DateTime dt) {

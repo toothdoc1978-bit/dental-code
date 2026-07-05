@@ -53,6 +53,22 @@ Every change below was verified with `flutter analyze` (0 issues) and
   validated by review + the rules comments. Deploy rules from the Firebase console.
 - **Stripe MCP**: not connected; feature declined (see above).
 
+## Follow-up: thermal engine upgrade (from Chad's TypeScript prototype)
+A proposed `thermals.ts` microclimate engine was reviewed. Rejected as-is:
+inverted thermal vector sign (its own unit test fails against its math — the
+"7 mph north" case actually computes 1 mph south), a phase clock that labels
+peak-heating afternoon (12:00–18:00) as "evening down draft," and slope/aspect/
+canopy inputs that don't exist for flat delta ground. Two ideas were genuinely
+better than our physics and were ported into `scent_vector.dart`:
+1. **Smooth 4–10 mph thermal "blowout" ramp** (`thermalWeight()`) replacing the
+   hard 5 mph cliff — the cone now swings gradually as the breeze builds.
+2. **Speed-weighted vector summation** — ambient wind at its real mph vs a
+   thermal of up to 4 mph, replacing the fixed 25/75 blend, so a 4 mph breeze
+   bends the cone far more than a 1 mph breath.
+Temperature-trend-driven phases (better than any clock) and the drainage
+heading (the flat-ground "aspect") were kept. All 6 original physics tests
+pass unchanged; 4 new tests cover the ramp, blowout, and blend behavior.
+
 ## Verification log
 - Baseline: analyze 0 errors / 11 infos; 9/9 tests pass.
 - After feature work: analyze **0 issues**; **35/35 tests pass**
