@@ -8,12 +8,18 @@ class HourlyWeather {
   final double windDirDeg; // direction the wind comes FROM (compass degrees)
   final double tempDelta; // this hour's temp minus the previous hour's
 
+  /// Total cloud cover, 0 (clear) to 100 (overcast). Clouds throttle the
+  /// radiative heating/cooling that drives thermals. Defaults to 50 (neutral)
+  /// for cached docs written before this field existed.
+  final double cloudCoverPct;
+
   const HourlyWeather({
     required this.time,
     required this.tempF,
     required this.windMph,
     required this.windDirDeg,
     required this.tempDelta,
+    this.cloudCoverPct = 50,
   });
 
   Map<String, dynamic> toMap() => {
@@ -22,6 +28,7 @@ class HourlyWeather {
         'windMph': windMph,
         'windDirDeg': windDirDeg,
         'tempDelta': tempDelta,
+        'cloudCoverPct': cloudCoverPct,
       };
 
   factory HourlyWeather.fromMap(Map<String, dynamic> m) => HourlyWeather(
@@ -30,6 +37,7 @@ class HourlyWeather {
         windMph: (m['windMph'] as num).toDouble(),
         windDirDeg: (m['windDirDeg'] as num).toDouble(),
         tempDelta: (m['tempDelta'] as num).toDouble(),
+        cloudCoverPct: (m['cloudCoverPct'] as num?)?.toDouble() ?? 50,
       );
 }
 

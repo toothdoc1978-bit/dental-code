@@ -37,6 +37,11 @@ double thermalWeight(double windMph) {
   return 1.0 - (windMph - 4) / 6.0;
 }
 
+/// How much of the radiative heating/cooling that drives thermals survives
+/// the cloud deck: 1.0 under a clear sky down to 0.3 under full overcast.
+double skyFactor(double cloudCoverPct) =>
+    1.0 - 0.7 * (cloudCoverPct.clamp(0, 100) / 100);
+
 /// Predicts where a hunter's scent drifts for the given hour.
 ///
 /// Hunting physics:
@@ -44,19 +49,30 @@ double thermalWeight(double windMph) {
 ///     opposite way (+180°).
 ///  2. Thermals ride the temperature trend: cooling air sinks and drains
 ///     toward [drainageHeading] (the river); warming air lifts and disperses
-///     the other way; no trend, no thermal.
+///     the other way; no trend, no thermal. Cloud cover throttles the whole
+///     effect ([skyFactor]) — overcast skies make weak thermals.
 ///  3. The ambient wind (at its real mph) and the thermal (up to
 ///     [_maxThermalMph], tapered by [thermalWeight]) are summed as vectors —
 ///     so a 4 mph breeze bends the cone far more than a 1 mph breath, and by
 ///     10 mph the true wind owns the cone outright.
-///  4. Shape follows the mix: wind-driven cones are long and narrow; sinking
+///  4. River-edge stands only ([riverEdge], with [waterTempF] known): the
+///     Mississippi is a thermal flywheel. Water much warmer than the air
+///     (fall evenings/nights) strengthens the drain toward the river; water
+///     much colder (spring afternoons) pushes a light river breeze inland.
+///     Water-driven, so clouds don't throttle it — but wind still blows it out.
+///  5. Shape follows the mix: wind-driven cones are long and narrow; sinking
 ///     evening air stays long and narrow toward the drainage; rising morning
 ///     air is short and wide (dispersion); slack air is medium and wide.
-ScentVector calculateScentVector(HourlyWeather h, {double drainageHeading = 90}) {
+ScentVector calculateScentVector(
+  HourlyWeather h, {
+  double drainageHeading = 90,
+  double? waterTempF,
+  bool riverEdge = false,
+}) {
   final baseScent = (h.windDirDeg + 180) % 360;
   final w = thermalWeight(h.windMph);
 
-  // Thermal component (none in slack air).
+  // Thermal component (none in slack air), throttled by cloud cover.
   final cooling = h.tempDelta < 0;
   final warming = h.tempDelta > 0;
   final thermalDir = cooling
@@ -64,10 +80,28 @@ ScentVector calculateScentVector(HourlyWeather h, {double drainageHeading = 90})
       : warming
           ? (drainageHeading + 180) % 360
           : baseScent; // slack: direction irrelevant at 0 strength
-  final thermalMph = (cooling || warming) ? _maxThermalMph * w : 0.0;
+  final thermalMph = (cooling || warming)
+      ? _maxThermalMph * w * skyFactor(h.cloudCoverPct)
+      : 0.0;
 
-  // Speed-weighted vector sum of the two movement (TO-direction) vectors.
-  final angle = _blendHeadings(baseScent, h.windMph, thermalDir, thermalMph);
+  // River water-temperature component, river-edge stands only.
+  var riverDir = drainageHeading;
+  var riverMph = 0.0;
+  if (riverEdge && waterTempF != null) {
+    final dW = waterTempF - h.tempF;
+    if (dW > 2 && !warming) {
+      // Warm water, cooling/slack land air: extra pull toward the river.
+      riverMph = math.min(2.0, (dW - 2) * 0.12) * w;
+    } else if (dW < -2 && warming) {
+      // Cold water, heating land: light river breeze pushes inland.
+      riverDir = (drainageHeading + 180) % 360;
+      riverMph = math.min(2.0, (-dW - 2) * 0.12) * w;
+    }
+  }
+
+  // Speed-weighted vector sum of the movement (TO-direction) vectors.
+  final angle = _blendHeadings(
+      baseScent, h.windMph, thermalDir, thermalMph, riverDir, riverMph);
 
   // Shape: interpolate between the pure-wind cone and the thermal-regime cone
   // by how much say the thermals actually have.
@@ -89,15 +123,17 @@ ScentVector calculateScentVector(HourlyWeather h, {double drainageHeading = 90})
 
 double _lerp(double a, double b, double t) => a + (b - a) * t;
 
-/// Vector-adds two compass headings with weights and returns the resultant
+/// Vector-adds three compass headings with weights and returns the resultant
 /// heading (0–360, clockwise from north). Uses north-up unit vectors
 /// (east = sin, north = cos) so [math.atan2](east, north) gives a compass
-/// heading. If both weights are ~0, falls back to [a].
-double _blendHeadings(double a, double wa, double b, double wb) {
+/// heading. If all weights are ~0, falls back to [a].
+double _blendHeadings(
+    double a, double wa, double b, double wb, double c, double wc) {
   final ar = a * math.pi / 180;
   final br = b * math.pi / 180;
-  final east = wa * math.sin(ar) + wb * math.sin(br);
-  final north = wa * math.cos(ar) + wb * math.cos(br);
+  final cr = c * math.pi / 180;
+  final east = wa * math.sin(ar) + wb * math.sin(br) + wc * math.sin(cr);
+  final north = wa * math.cos(ar) + wb * math.cos(br) + wc * math.cos(cr);
   if (east.abs() < 1e-9 && north.abs() < 1e-9) return a;
   final deg = math.atan2(east, north) * 180 / math.pi;
   return (deg % 360 + 360) % 360;

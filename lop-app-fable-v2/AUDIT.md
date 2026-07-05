@@ -69,6 +69,25 @@ Temperature-trend-driven phases (better than any clock) and the drainage
 heading (the flat-ground "aspect") were kept. All 6 original physics tests
 pass unchanged; 4 new tests cover the ramp, blowout, and blend behavior.
 
+## Follow-up 2: cloud cover + river water temperature
+- **Cloud cover** (hourly, same free Open-Meteo call): thermals are radiative,
+  so a `skyFactor` throttles thermal strength from 100% (clear) to 30%
+  (overcast). Cached forecast docs written before the field existed default to
+  a neutral 50%.
+- **River water temperature** (river-edge stands only): the Vicksburg and
+  Greenville gauges don't report water temp (verified — empty USGS 00010
+  series), so it comes from Baton Rouge (USGS 07374000), the nearest reporting
+  station; lower-river water temp varies slowly along the reach. Cached in the
+  same `riverStatus/current` doc. Physics: water >2°F warmer than the air adds
+  up to 2 mph of extra drain toward the river during cooling/slack hours; water
+  >2°F colder adds up to 2 mph of inland river breeze during warming hours.
+  Wind blowout still applies; clouds do not (water-driven, not sun-driven).
+- **River-edge stands** are listed in `kRiverEdgeStandCodes` (config.dart),
+  seeded by reading the aerial (river wraps the east + south boundaries) —
+  flagged for Chad to correct. The scent panel shows "river-edge (water NN°F)"
+  when the adjustment is active so mislabeled stands are easy to spot.
+- Tests: 46 total; all 10 pre-existing physics tests pass unchanged.
+
 ## Verification log
 - Baseline: analyze 0 errors / 11 infos; 9/9 tests pass.
 - After feature work: analyze **0 issues**; **35/35 tests pass**

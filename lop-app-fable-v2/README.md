@@ -32,10 +32,15 @@ and change log). The original app lives untouched in `lop-app/` on `main`.
   so the printed stand numbers stay visible.
 - **Scent-drift prediction** — per-stand hourly wind + thermal drift, computed
   from Open-Meteo (keyless) and drawn as a rotating, fading cone with a
-  24-hour slider that now starts at the hour containing *now*. Rules: wind
-  >5 mph dominates (long/narrow along wind-to direction); calm+cooling evenings
-  drain toward the river (long/narrow); calm+warming mornings disperse away
-  from the river (short/wide). Opening the map while checked in auto-selects
+  24-hour slider that starts at the hour containing *now*. Physics: the true
+  wind (at its real mph) is vector-summed against a thermal of up to 4 mph that
+  fades linearly between 4 and 10 mph of wind ("blowout"); cooling air drains
+  toward the river, warming air disperses away. **Cloud cover throttles
+  thermals** (overcast = ~30% strength). **River-edge stands** (east/south
+  boundary, `kRiverEdgeStandCodes` in config) also feel the Mississippi's water
+  temperature: warm water strengthens the evening drain toward the river; cold
+  water pushes a light river breeze inland on warm afternoons (USGS water temp,
+  nearest reporting station). Opening the map while checked in auto-selects
   **your** stand so your cone appears immediately.
 - **My-hunt banner** — persistent bar with your stand/hunt/elapsed time (ticks
   every minute) and one-tap Check Out.

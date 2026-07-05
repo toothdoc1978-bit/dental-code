@@ -27,6 +27,35 @@ void main() {
     });
   });
 
+  group('RiverService.waterTempFFrom', () {
+    Map<String, dynamic> usgs(List<Map<String, dynamic>> values) => {
+          'value': {
+            'timeSeries': [
+              {
+                'values': [
+                  {'value': values},
+                ],
+              },
+            ],
+          },
+        };
+
+    test('converts the latest USGS reading from °C to °F', () {
+      final f = RiverService.waterTempFFrom(usgs([
+        {'value': '28.7', 'dateTime': '2026-07-05T17:00:00.000-05:00'},
+      ]));
+      expect(f, closeTo(83.66, 0.01));
+    });
+
+    test('empty series, empty values, and sentinel readings -> null', () {
+      expect(RiverService.waterTempFFrom({'value': {'timeSeries': []}}), isNull);
+      expect(RiverService.waterTempFFrom(usgs([])), isNull);
+      expect(
+          RiverService.waterTempFFrom(usgs([{'value': '-999999'}])), isNull);
+      expect(RiverService.waterTempFFrom({}), isNull);
+    });
+  });
+
   group('GaugeStatus.trend', () {
     test('rising / falling need > 0.2 ft of movement', () {
       expect(const GaugeStatus(observedFt: 20, forecastFt: 21).trend,

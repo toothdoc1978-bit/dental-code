@@ -99,7 +99,15 @@ class _ScentPanel extends ConsumerWidget {
 
     final i = ref.watch(selectedHourProvider).clamp(0, hours.length - 1);
     final h = hours[i];
-    final v = calculateScentVector(h, drainageHeading: kDrainageHeading);
+    final riverEdge = kRiverEdgeStandCodes.contains(selected);
+    final waterTempF =
+        ref.watch(riverStatusProvider).valueOrNull?.waterTempF;
+    final v = calculateScentVector(
+      h,
+      drainageHeading: kDrainageHeading,
+      waterTempF: waterTempF,
+      riverEdge: riverEdge,
+    );
 
     return _wrap(
       context,
@@ -114,7 +122,9 @@ class _ScentPanel extends ConsumerWidget {
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
           Text(
-            '${h.tempF.round()}°F · ${_regime(h.windMph, h.tempDelta)}',
+            '${h.tempF.round()}°F · ${h.cloudCoverPct.round()}% clouds · '
+            '${_regime(h.windMph, h.tempDelta)}'
+            '${riverEdge && waterTempF != null ? ' · river-edge (water ${waterTempF.round()}°F)' : ''}',
             style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
           ),
           if (hours.length > 1)

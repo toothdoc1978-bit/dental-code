@@ -41,16 +41,24 @@ class RiverStatus {
   final GaugeStatus vicksburg;
   final GaugeStatus greenville;
 
+  /// Mississippi water temperature (°F). The Vicksburg/Greenville gauges don't
+  /// report temperature, so this comes from the nearest reporting USGS station
+  /// (Baton Rouge) — lower-river water temp varies slowly along the reach, so
+  /// it's a fair proxy for the water off Lookout Point. Null if unavailable.
+  final double? waterTempF;
+
   const RiverStatus({
     required this.fetchedAt,
     required this.vicksburg,
     required this.greenville,
+    this.waterTempF,
   });
 
   Map<String, dynamic> toMap() => {
         'fetchedAt': Timestamp.fromDate(fetchedAt),
         'vicksburg': vicksburg.toMap(),
         'greenville': greenville.toMap(),
+        'waterTempF': waterTempF,
       };
 
   factory RiverStatus.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -62,6 +70,7 @@ class RiverStatus {
           GaugeStatus.fromMap((data['vicksburg'] as Map?)?.cast<String, dynamic>()),
       greenville: GaugeStatus.fromMap(
           (data['greenville'] as Map?)?.cast<String, dynamic>()),
+      waterTempF: (data['waterTempF'] as num?)?.toDouble(),
     );
   }
 }

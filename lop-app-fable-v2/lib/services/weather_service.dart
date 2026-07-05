@@ -47,7 +47,7 @@ class WeatherService {
     final uri = Uri.parse(
       'https://api.open-meteo.com/v1/forecast'
       '?latitude=$_lat&longitude=$_lon'
-      '&hourly=temperature_2m,wind_speed_10m,wind_direction_10m'
+      '&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,cloud_cover'
       '&temperature_unit=fahrenheit&wind_speed_unit=mph'
       '&forecast_days=2&timezone=auto',
     );
@@ -61,6 +61,8 @@ class WeatherService {
     final temps = (hourly['temperature_2m'] as List).cast<num>();
     final winds = (hourly['wind_speed_10m'] as List).cast<num>();
     final dirs = (hourly['wind_direction_10m'] as List).cast<num>();
+    // cloud_cover may be absent if the API ever drops the field; default 50.
+    final clouds = (hourly['cloud_cover'] as List?)?.cast<num>();
 
     // First index at or after the current hour.
     final now = DateTime.now();
@@ -85,6 +87,7 @@ class WeatherService {
         windMph: winds[i].toDouble(),
         windDirDeg: dirs[i].toDouble(),
         tempDelta: temp - prev,
+        cloudCoverPct: (i < (clouds?.length ?? 0)) ? clouds![i].toDouble() : 50,
       ));
     }
     return Forecast(fetchedAt: DateTime.now(), hours: hours);

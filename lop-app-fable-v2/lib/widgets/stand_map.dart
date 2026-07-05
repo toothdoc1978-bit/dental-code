@@ -40,10 +40,15 @@ class StandMap extends ConsumerWidget {
       return null;
     }
     final i = hour.clamp(0, forecast.hours.length - 1);
+    final river = ref.watch(riverStatusProvider).valueOrNull;
     return (
       tipFrac: positions[selected]!,
-      vector: calculateScentVector(forecast.hours[i],
-          drainageHeading: kDrainageHeading),
+      vector: calculateScentVector(
+        forecast.hours[i],
+        drainageHeading: kDrainageHeading,
+        waterTempF: river?.waterTempF,
+        riverEdge: kRiverEdgeStandCodes.contains(selected),
+      ),
     );
   }
 

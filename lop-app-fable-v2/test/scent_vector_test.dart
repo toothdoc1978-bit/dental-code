@@ -6,6 +6,7 @@ HourlyWeather _hw({
   required double wind,
   required double dir,
   required double delta,
+  double clouds = 50,
 }) =>
     HourlyWeather(
       time: DateTime(2026, 1, 1, 12),
@@ -13,6 +14,7 @@ HourlyWeather _hw({
       windMph: wind,
       windDirDeg: dir,
       tempDelta: delta,
+      cloudCoverPct: clouds,
     );
 
 void main() {
@@ -80,6 +82,47 @@ void main() {
     final fresh = calculateScentVector(_hw(wind: 4, dir: 0, delta: -2));
     // Stronger ambient wind drags the resultant closer to 180 (downwind).
     expect(fresh.angle, greaterThan(light.angle));
+  });
+
+  test('sky factor: clear = full thermals, overcast = 30%', () {
+    expect(skyFactor(0), 1.0);
+    expect(skyFactor(50), closeTo(0.65, 0.001));
+    expect(skyFactor(100), closeTo(0.3, 0.001));
+  });
+
+  test('overcast weakens the thermal bend toward the river', () {
+    final clear = calculateScentVector(_hw(wind: 2, dir: 0, delta: -2, clouds: 0));
+    final overcast =
+        calculateScentVector(_hw(wind: 2, dir: 0, delta: -2, clouds: 100));
+    // Clear sky: strong drain pulls the cone hard toward 90 (the river).
+    // Overcast: weak thermal, cone stays closer to plain downwind (180).
+    expect(clear.angle, lessThan(overcast.angle));
+    expect(overcast.angle, lessThan(180));
+  });
+
+  test('river-edge + warm water strengthens the evening drain', () {
+    final h = _hw(wind: 2, dir: 0, delta: -2, clouds: 0);
+    final plain = calculateScentVector(h);
+    final edge = calculateScentVector(h, waterTempF: 65, riverEdge: true);
+    // Warm water pulls the cone even harder toward the river (90).
+    expect(edge.angle, lessThan(plain.angle));
+    expect(edge.angle, greaterThan(90));
+  });
+
+  test('water temp is ignored for stands not on the river', () {
+    final h = _hw(wind: 2, dir: 0, delta: -2, clouds: 0);
+    final plain = calculateScentVector(h);
+    final inland = calculateScentVector(h, waterTempF: 65, riverEdge: false);
+    expect(inland.angle, closeTo(plain.angle, 0.001));
+  });
+
+  test('river-edge + cold water pushes a river breeze inland when warming', () {
+    final h = _hw(wind: 2, dir: 0, delta: 2, clouds: 0);
+    final plain = calculateScentVector(h);
+    final edge = calculateScentVector(h, waterTempF: 35, riverEdge: true);
+    // Both drift away from the river (toward 270); cold water pushes harder.
+    expect(edge.angle, greaterThan(plain.angle));
+    expect(edge.angle, lessThan(270));
   });
 
   test('custom drainage heading is respected', () {

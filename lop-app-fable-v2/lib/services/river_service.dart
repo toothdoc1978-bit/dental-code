@@ -54,18 +54,22 @@ class RiverService {
           return; // still fresh
         }
       }
-      final results = await Future.wait([
+      final gauges = await Future.wait([
         _gauge(kVicksburgGaugeLid),
         _gauge(kGreenvilleGaugeLid),
       ]);
+      final waterTempF = await _waterTempF();
       // Don't clobber a good cache with a failed fetch.
-      if (results[0].observedFt == null && results[1].observedFt == null) {
+      if (gauges[0].observedFt == null &&
+          gauges[1].observedFt == null &&
+          waterTempF == null) {
         return;
       }
       await _doc.set(RiverStatus(
         fetchedAt: DateTime.now(),
-        vicksburg: results[0],
-        greenville: results[1],
+        vicksburg: gauges[0],
+        greenville: gauges[1],
+        waterTempF: waterTempF,
       ).toMap());
     } catch (_) {
       // Offline or API hiccup — keep whatever is already cached.
@@ -80,6 +84,41 @@ class RiverService {
       return parseGauge(jsonDecode(resp.body) as Map<String, dynamic>);
     } catch (_) {
       return const GaugeStatus();
+    }
+  }
+
+  /// Mississippi water temperature (°F) from the USGS instantaneous-values
+  /// API, or null on any failure.
+  Future<double?> _waterTempF() async {
+    try {
+      final uri = Uri.parse(
+        'https://waterservices.usgs.gov/nwis/iv/'
+        '?sites=$kWaterTempUsgsSite&parameterCd=00010&format=json',
+      );
+      final resp = await http.get(uri).timeout(const Duration(seconds: 4));
+      if (resp.statusCode != 200) return null;
+      return waterTempFFrom(jsonDecode(resp.body) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Pulls the latest water temperature (°C in the feed, returned as °F) out
+  /// of a USGS IV response. Pure and static so it's unit-testable.
+  static double? waterTempFFrom(Map<String, dynamic> json) {
+    try {
+      final series = ((json['value'] as Map)['timeSeries'] as List);
+      if (series.isEmpty) return null;
+      final values =
+          (((series.first as Map)['values'] as List).first as Map)['value']
+              as List;
+      if (values.isEmpty) return null;
+      final c = double.tryParse((values.first as Map)['value'] as String);
+      // Sanity bounds; USGS uses sentinel values for bad readings.
+      if (c == null || c < -5 || c > 45) return null;
+      return c * 9 / 5 + 32;
+    } catch (_) {
+      return null;
     }
   }
 
