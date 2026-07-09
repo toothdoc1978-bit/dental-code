@@ -6,11 +6,13 @@ import '../data/stands_data.dart';
 import '../providers/app_providers.dart';
 import '../services/member_store.dart';
 import '../utils/format.dart';
+import '../widgets/high_water_banner.dart';
 import '../widgets/map_reference.dart';
 import '../widgets/stand_detail_sheet.dart';
 import '../widgets/stand_list.dart';
 import 'conditions_screen.dart';
 import 'hunt_log_screen.dart';
+import 'rules_screen.dart';
 
 /// Main screen: my-hunt banner + club map + live stand list.
 ///
@@ -102,12 +104,18 @@ class HomeScreen extends ConsumerWidget {
             ),
           PopupMenuButton<String>(
             onSelected: (v) {
-              if (v == 'change') {
+              if (v == 'rules') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RulesScreen()),
+                );
+              } else if (v == 'change') {
                 MemberStore.clear();
                 ref.read(currentMemberProvider.notifier).state = null;
               }
             },
             itemBuilder: (_) => const [
+              PopupMenuItem(value: 'rules', child: Text('Club rules')),
               PopupMenuItem(value: 'change', child: Text('Change hunter')),
             ],
           ),
@@ -115,6 +123,7 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          const HighWaterBanner(),
           const _MyHuntBanner(),
           Expanded(
             child: LayoutBuilder(

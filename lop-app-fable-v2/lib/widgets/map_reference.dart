@@ -5,6 +5,7 @@ import '../config.dart';
 import '../data/stands_data.dart';
 import '../providers/app_providers.dart';
 import '../services/scent_vector.dart';
+import 'high_water_banner.dart';
 import 'stand_detail_sheet.dart';
 import 'stand_map.dart';
 
@@ -52,6 +53,7 @@ class MapFullScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          const HighWaterBanner(),
           if (placeMode) _PlaceBar(),
           Expanded(
             child: Stack(

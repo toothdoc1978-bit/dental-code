@@ -1,4 +1,20 @@
-// Tunable constants for the scent-drift feature and river gauges.
+// Tunable constants for the scent-drift feature, river gauges, high-water
+// rule, and admin access.
+
+/// Shown in-app so you can tell at a glance which build is deployed.
+const String kAppVersion = 'v2.2';
+
+/// Members who see Admin controls (high-water override). UI-level gating —
+/// fine for a trusted club on anonymous auth.
+const Set<String> kAdminMemberIds = {'m27'}; // Chad Gardner
+
+/// LDWF Area 1 high-water rule: when the Mississippi at Vicksburg reaches
+/// 43.0 ft during deer season, land east of US-65 (all of Lookout Point)
+/// becomes ARCHERY ONLY for deer. Normal methods resume once the stage drops
+/// below 41.0 ft. The gap between the two numbers (hysteresis) stops the app
+/// from flip-flopping while the river hovers near the line.
+const double kHighWaterOnFt = 43.0;
+const double kHighWaterOffFt = 41.0;
 
 /// Degrees to rotate scent headings to match the aerial photo's orientation.
 /// 0 = the photo is north-up (the Eagle Forestry aerial's compass points up).

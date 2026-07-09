@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:lop_app/models/club_status.dart';
 import 'package:lop_app/models/forecast.dart';
 import 'package:lop_app/models/hunt.dart';
 import 'package:lop_app/models/member.dart';
@@ -13,6 +14,7 @@ import 'package:lop_app/providers/app_providers.dart';
 import 'package:lop_app/screens/conditions_screen.dart';
 import 'package:lop_app/screens/home_screen.dart';
 import 'package:lop_app/screens/hunt_log_screen.dart';
+import 'package:lop_app/screens/rules_screen.dart';
 
 const _me = Member(
     id: 'm99', name: 'Test Hunter', phone: '555-000-0000', role: 'Member', shares: '1');
@@ -67,9 +69,16 @@ Widget _app({List<Override> overrides = const [], Widget home = const HomeScreen
   return ProviderScope(overrides: overrides, child: MaterialApp(home: home));
 }
 
-List<Override> _baseOverrides({Hunt? myHunt, List<Hunt> active = const []}) => [
+List<Override> _baseOverrides({
+  Hunt? myHunt,
+  List<Hunt> active = const [],
+  ClubStatus? club,
+  Member member = _me,
+}) =>
+    [
       authUidProvider.overrideWith((ref) => 'uid-me'),
-      currentMemberProvider.overrideWith((ref) => _me),
+      currentMemberProvider.overrideWith((ref) => member),
+      clubStatusProvider.overrideWith((ref) => Stream.value(club)),
       activeHuntsProvider.overrideWith((ref) => Stream.value(active)),
       myActiveHuntProvider.overrideWith((ref) => Stream.value(myHunt)),
       standPositionsProvider.overrideWith(
@@ -183,6 +192,66 @@ void main() {
     expect(find.textContaining('Vburg 21.3 ft'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('high-water banner shows when the rule is active', (tester) async {
+    await tester.pumpWidget(_app(
+        overrides: _baseOverrides(
+            club: const ClubStatus(
+                highWaterArchery: false, mode: HighWaterMode.forceOn))));
+    await tester.pump();
+
+    expect(find.textContaining('HIGH WATER'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('no high-water banner in normal conditions', (tester) async {
+    await tester.pumpWidget(_app(overrides: _baseOverrides()));
+    await tester.pump();
+
+    expect(find.textContaining('HIGH WATER'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('admin card only shows for the admin member', (tester) async {
+    const chad = Member(
+        id: 'm27', name: 'Chad Gardner', phone: '318-282-1827', role: 'Board');
+    await tester.pumpWidget(_app(
+        overrides: _baseOverrides(member: chad),
+        home: const ConditionsScreen()));
+    await tester.pump();
+    expect(find.textContaining('Admin'), findsOneWidget);
+    expect(find.text('Force ON'), findsOneWidget);
+
+    // Tear down before re-pumping: a ProviderScope's overrides must not
+    // change in place, so the second pump needs a fresh tree.
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpWidget(_app(
+        overrides: _baseOverrides(), home: const ConditionsScreen()));
+    await tester.pump();
+    expect(find.textContaining('Admin'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('rules screen renders buck criteria and aging guide',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: RulesScreen()));
+    await tester.pump();
+
+    expect(find.textContaining('Max 5 bucks per membership'), findsOneWidget);
+    expect(find.textContaining('Cull buck'), findsOneWidget);
+    expect(find.textContaining('NEVER a cull'), findsOneWidget);
+    expect(find.textContaining('Ten-point or better'), findsOneWidget);
+
+    await tester.dragUntilVisible(
+      find.textContaining('Judging a mature buck'),
+      find.byType(ListView),
+      const Offset(0, -400),
+    );
+    expect(find.textContaining('Judging a mature buck'), findsOneWidget);
   });
 
   testWidgets('history button navigates to the hunt log', (tester) async {

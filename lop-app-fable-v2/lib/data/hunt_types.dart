@@ -27,9 +27,22 @@ const Set<String> kDeerTypes = {
   'Crossbow',
 };
 
-/// The hunt types allowed on a stand of the given kind.
-List<String> allowedHuntTypes({required bool bowOnly}) =>
-    bowOnly ? kBowOnlyTypes : kHuntTypes;
+/// Deer firearm methods barred under the LDWF Area 1 high-water rule
+/// (Vicksburg >= 43.0 ft: archery only for deer east of US-65). Squirrel,
+/// duck, and other non-deer methods are unaffected.
+const Set<String> kFirearmDeerTypes = {
+  'Rifle',
+  'Suppressed Rifle',
+  'Muzzleloader',
+};
+
+/// The hunt types allowed on a stand of the given kind. When [highWater] is
+/// active, the deer firearm methods disappear everywhere.
+List<String> allowedHuntTypes({required bool bowOnly, bool highWater = false}) {
+  final base = bowOnly ? kBowOnlyTypes : kHuntTypes;
+  if (!highWater) return base;
+  return base.where((t) => !kFirearmDeerTypes.contains(t)).toList();
+}
 
 /// Whether checking out of [huntType] requires a deer count.
 bool requiresDeerCount(String huntType) => kDeerTypes.contains(huntType);

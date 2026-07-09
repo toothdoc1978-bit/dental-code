@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config.dart';
+import '../models/club_status.dart';
 import '../models/forecast.dart';
 import '../models/river_status.dart';
 import '../providers/app_providers.dart';
@@ -19,6 +20,10 @@ class ConditionsScreen extends ConsumerWidget {
     final forecast = ref.watch(forecastProvider).valueOrNull;
     final river = ref.watch(riverStatusProvider).valueOrNull;
 
+    final highWater = ref.watch(highWaterProvider);
+    final member = ref.watch(currentMemberProvider);
+    final isAdmin = member != null && kAdminMemberIds.contains(member.id);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Conditions')),
       body: ListView(
@@ -26,12 +31,82 @@ class ConditionsScreen extends ConsumerWidget {
         children: [
           _NowCard(forecast: forecast),
           const SizedBox(height: 12),
-          _RiverCard(river: river),
+          _RiverCard(river: river, highWater: highWater),
+          if (isAdmin) ...[
+            const SizedBox(height: 12),
+            const _AdminCard(),
+          ],
           if (forecast != null && forecast.hours.isNotEmpty) ...[
             const SizedBox(height: 12),
             _HourlyCard(forecast: forecast),
           ],
+          const SizedBox(height: 16),
+          Center(
+            child: Text('Lookout Point app $kAppVersion',
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Admin-only: control how the high-water archery rule is decided.
+class _AdminCard extends ConsumerWidget {
+  const _AdminCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(clubStatusProvider).valueOrNull;
+    final mode = status?.mode ?? HighWaterMode.auto;
+    final active = status?.archeryOnly ?? false;
+
+    return Card(
+      color: Colors.amber.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.admin_panel_settings, size: 18),
+                SizedBox(width: 6),
+                Text('Admin — high-water archery rule',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              active
+                  ? 'Rule is ACTIVE — deer hunting is archery only.'
+                  : 'Rule is not active — all methods allowed.',
+              style: TextStyle(
+                  color: active ? Colors.red.shade800 : Colors.green.shade800,
+                  fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 10),
+            SegmentedButton<HighWaterMode>(
+              segments: const [
+                ButtonSegment(
+                    value: HighWaterMode.auto, label: Text('Auto (gauge)')),
+                ButtonSegment(
+                    value: HighWaterMode.forceOn, label: Text('Force ON')),
+                ButtonSegment(
+                    value: HighWaterMode.forceOff, label: Text('Force OFF')),
+              ],
+              selected: {mode},
+              onSelectionChanged: (sel) =>
+                  ref.read(riverServiceProvider).setHighWaterMode(sel.first),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Auto follows the Vicksburg gauge: ON at ${kHighWaterOnFt.toStringAsFixed(1)} ft, '
+              'back OFF below ${kHighWaterOffFt.toStringAsFixed(1)} ft.',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -110,10 +185,11 @@ class _NowCard extends StatelessWidget {
   }
 }
 
-/// Mississippi River stages + water temperature.
+/// Mississippi River stages + water temperature + high-water rule status.
 class _RiverCard extends StatelessWidget {
   final RiverStatus? river;
-  const _RiverCard({required this.river});
+  final bool highWater;
+  const _RiverCard({required this.river, this.highWater = false});
 
   @override
   Widget build(BuildContext context) {
@@ -138,6 +214,30 @@ class _RiverCard extends StatelessWidget {
                 Text('Water temperature: ${r.waterTempF!.round()}°F'),
               ],
               const SizedBox(height: 10),
+              if (highWater)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    'HIGH WATER RULE ACTIVE — deer hunting is archery only '
+                    'east of US-65 until Vicksburg drops below '
+                    '${kHighWaterOffFt.toStringAsFixed(1)} ft.',
+                    style: TextStyle(
+                        color: Colors.red.shade800,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    'LDWF rule: deer hunting east of US-65 goes archery-only '
+                    'if Vicksburg reaches ${kHighWaterOnFt.toStringAsFixed(1)} ft '
+                    '(back to normal below ${kHighWaterOffFt.toStringAsFixed(1)} ft).',
+                    style:
+                        TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  ),
+                ),
               Text(
                 'Stages are recorded automatically on every check-in — see the '
                 'Hunt Log to compare hunts against river levels.',

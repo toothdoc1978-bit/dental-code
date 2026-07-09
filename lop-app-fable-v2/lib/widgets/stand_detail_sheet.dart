@@ -112,10 +112,19 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
       );
     }
 
-    final types = allowedHuntTypes(bowOnly: stand.bowOnly);
+    final highWater = ref.watch(highWaterProvider);
+    final types = allowedHuntTypes(bowOnly: stand.bowOnly, highWater: highWater);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (highWater) ...[
+          _notice(
+            Icons.water,
+            'High water — archery only for deer (LDWF Area 1 rule while '
+            'Vicksburg is above 43 ft).',
+          ),
+          const SizedBox(height: 12),
+        ],
         const Text('What are you hunting?',
             style: TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 10),

@@ -108,6 +108,31 @@ pass unchanged; 4 new tests cover the ramp, blowout, and blend behavior.
 - Tests: 48 total (Conditions screen render, check-out button row, home
   chip changes).
 
+## Follow-up 4: high-water law, club rules screen, logo, version stamp
+- **LDWF Area 1 high-water rule** (`clubStatus/current` doc): when Vicksburg
+  hits ≥ 43.0 ft, deer hunting east of US-65 goes archery-only until the stage
+  drops below 41.0 ft. Implemented with hysteresis
+  (`RiverService.resolveHighWater`, pure/tested) driven by the existing hourly
+  gauge fetch; Rifle/Suppressed Rifle/Muzzleloader disappear from check-in
+  everywhere while active; amber banner on home + map; note in Conditions.
+  **Admin override (Chad, member m27 — `kAdminMemberIds`)**: Auto / Force ON /
+  Force OFF segmented control in Conditions. Honest note: with anonymous auth,
+  admin gating is app-level, appropriate for a trusted club.
+- **Club Rules screen**: quick-reference distilled from the 2023-24 rules PDF
+  at ~10th-grade reading level — buck criteria (cull vs management vs 10-pt),
+  post-kill protocol, does, stand times/draws, riding, guests, don'ts, fines.
+  Content in one editable file (`lib/data/club_rules.dart`, refresh each
+  August). Reached from the home overflow menu and a link on the member picker
+  (guests can read before picking a name).
+- **Judging-a-mature-buck section**: included (the buck rules hinge on aging);
+  uses REAL club trail-cam photos (drop-in `assets/rules/buck_45_55.jpg`),
+  deliberately NOT AI-generated imagery — generated deer get anatomy subtly
+  wrong and would teach wrong cues.
+- **Logo** (`assets/lop_logo.png`, drop-in): member picker + rules headers.
+- **Version stamp** `kAppVersion` (member picker + Conditions footer) so a
+  stale web deploy is instantly identifiable — this diagnosed the "old circles
+  still showing" report (stale hosting deploy, not a code regression).
+
 ## Verification log
 - Baseline: analyze 0 errors / 11 infos; 9/9 tests pass.
 - After feature work: analyze **0 issues**; **35/35 tests pass**

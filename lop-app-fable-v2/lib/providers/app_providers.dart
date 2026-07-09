@@ -1,6 +1,7 @@
 import 'dart:ui' show Offset;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/stands_data.dart';
+import '../models/club_status.dart';
 import '../models/forecast.dart';
 import '../models/hunt.dart';
 import '../models/member.dart';
@@ -67,6 +68,17 @@ final forecastProvider = StreamProvider<Forecast?>((ref) {
 
 final riverStatusProvider = StreamProvider<RiverStatus?>((ref) {
   return ref.watch(riverServiceProvider).streamStatus();
+});
+
+// --- Club status (LDWF high-water archery rule) ---------------------------------
+
+final clubStatusProvider = StreamProvider<ClubStatus?>((ref) {
+  return ref.watch(riverServiceProvider).streamClubStatus();
+});
+
+/// Whether the archery-only rule is in effect right now (override-aware).
+final highWaterProvider = Provider<bool>((ref) {
+  return ref.watch(clubStatusProvider).valueOrNull?.archeryOnly ?? false;
 });
 
 // --- Scent cone UI state ------------------------------------------------------

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config.dart';
 import '../data/members.dart';
 import '../models/member.dart';
 import '../providers/app_providers.dart';
 import '../services/member_store.dart';
+import 'rules_screen.dart';
 
 /// First-launch identity screen: pick your name from the roster and confirm
 /// your phone once. Saved on the device and remembered after that.
@@ -32,6 +34,15 @@ class _MemberPickerScreenState extends ConsumerState<MemberPickerScreen> {
       ),
       body: Column(
         children: [
+          // Club logo — drop the file in assets/lop_logo.png and it appears.
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Image.asset(
+              'assets/lop_logo.png',
+              height: 88,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
@@ -60,6 +71,28 @@ class _MemberPickerScreenState extends ConsumerState<MemberPickerScreen> {
                   onTap: () => _confirm(m),
                 );
               },
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.menu_book, size: 18),
+                    label: const Text('Read the club rules'),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RulesScreen()),
+                    ),
+                  ),
+                  Text(kAppVersion,
+                      style: TextStyle(
+                          color: Colors.grey.shade500, fontSize: 11)),
+                ],
+              ),
             ),
           ),
         ],

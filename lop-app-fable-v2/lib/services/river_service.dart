@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import '../config.dart';
+import '../models/club_status.dart';
 import '../models/river_status.dart';
 
 /// Mississippi River stage from NOAA's National Water Prediction Service
@@ -24,6 +25,9 @@ class RiverService {
 
   DocumentReference<Map<String, dynamic>> get _doc =>
       _db.collection('riverStatus').doc('current');
+
+  DocumentReference<Map<String, dynamic>> get _clubDoc =>
+      _db.collection('clubStatus').doc('current');
 
   /// Returns both gauges' observed stage in feet, or null for either on any
   /// failure (offline, timeout, API hiccup) so check-in is never blocked.
@@ -71,9 +75,52 @@ class RiverService {
         greenville: gauges[1],
         waterTempF: waterTempF,
       ).toMap());
+      await _updateHighWater(gauges[0].observedFt);
     } catch (_) {
       // Offline or API hiccup — keep whatever is already cached.
     }
+  }
+
+  // --- LDWF high-water archery rule ------------------------------------------
+
+  /// Live stream of the club status doc (null until it first exists).
+  Stream<ClubStatus?> streamClubStatus() =>
+      _clubDoc.snapshots().map((s) => s.exists ? ClubStatus.fromDoc(s) : null);
+
+  /// Admin override: force the high-water rule on/off, or return to auto.
+  Future<void> setHighWaterMode(HighWaterMode mode) {
+    return _clubDoc.set({
+      'highWaterMode': mode.name,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Applies the gauge reading to the automatic high-water state. Only writes
+  /// when the mode is auto and the answer actually changed.
+  Future<void> _updateHighWater(double? vicksburgFt) async {
+    final snap = await _clubDoc.get();
+    final prev = snap.exists ? ClubStatus.fromDoc(snap) : null;
+    if (prev != null && prev.mode != HighWaterMode.auto) return;
+    final was = prev?.highWaterArchery ?? false;
+    final now = resolveHighWater(was, vicksburgFt);
+    if (now == was && snap.exists) return;
+    if (now == was && !snap.exists && !now) return; // nothing worth creating
+    await _clubDoc.set({
+      'highWaterArchery': now,
+      'highWaterMode': HighWaterMode.auto.name,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// The LDWF hysteresis: ON at >= [kHighWaterOnFt] (43.0), OFF below
+  /// [kHighWaterOffFt] (41.0), unchanged in between or with no reading.
+  /// Pure and static so it's unit-testable.
+  static bool resolveHighWater(bool previous, double? vicksburgStageFt) {
+    final s = vicksburgStageFt;
+    if (s == null) return previous;
+    if (s >= kHighWaterOnFt) return true;
+    if (s < kHighWaterOffFt) return false;
+    return previous;
   }
 
   Future<GaugeStatus> _gauge(String lid) async {

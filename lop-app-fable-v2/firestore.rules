@@ -78,5 +78,18 @@ service cloud.firestore {
         && doc == 'current'
         && request.resource.data.fetchedAt is timestamp;
     }
+
+    // Club-wide state: the LDWF high-water archery rule (clubStatus/current).
+    // Writable by any signed-in device: the auto gauge logic runs client-side,
+    // and admin gating is app-level (trusted club on anonymous auth).
+    match /clubStatus/{doc} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && doc == 'current'
+        && (!('highWaterArchery' in request.resource.data)
+            || request.resource.data.highWaterArchery is bool)
+        && (!('highWaterMode' in request.resource.data)
+            || request.resource.data.highWaterMode in ['auto', 'forceOn', 'forceOff']);
+    }
   }
 }
