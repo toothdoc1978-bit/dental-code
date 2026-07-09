@@ -125,9 +125,4 @@ class FirestoreService {
     });
   }
 
-  Future<void> setStandPosition(String code, double x, double y) {
-    return _positions.doc(code).set({'x': x, 'y': y});
-  }
-
-  Future<void> clearStandPosition(String code) => _positions.doc(code).delete();
 }

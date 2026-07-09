@@ -17,8 +17,8 @@ import 'rules_screen.dart';
 /// Main screen: my-hunt banner + club map + live stand list.
 ///
 /// Wide screens (iPad) get map | list side-by-side; narrow screens stack a map
-/// thumbnail above the list. The green "Place stands" button shows only until
-/// all stands are pinned (the map screen keeps its own for corrections).
+/// thumbnail above the list. (Stand-pin placement was retired once all 130
+/// pins were set — positions are read-only club data now.)
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -38,38 +38,11 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  String? _firstUnplaced(Map<String, Offset> placed) {
-    for (final s in kStands) {
-      if (!placed.containsKey(s.code)) return s.code;
-    }
-    return null;
-  }
-
-  /// Turn on place mode and open the full-screen map, ready to drop pins.
-  void _startPlacing(BuildContext context, WidgetRef ref) {
-    final positions = ref.read(standPositionsProvider).valueOrNull ?? const {};
-    ref.read(placeModeProvider.notifier).state = true;
-    ref.read(placingStandProvider.notifier).state =
-        ref.read(placingStandProvider) ?? _firstUnplaced(positions);
-    _openMap(context, ref);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final member = ref.watch(currentMemberProvider);
-    final positions = ref.watch(standPositionsProvider).valueOrNull ?? const {};
-    final allPlaced = positions.length >= kStands.length;
 
     return Scaffold(
-      floatingActionButton: allPlaced
-          ? null
-          : FloatingActionButton.extended(
-              backgroundColor: Colors.green.shade700,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.add_location_alt),
-              label: const Text('Place stands'),
-              onPressed: () => _startPlacing(context, ref),
-            ),
       appBar: AppBar(
         title: const Text('Lookout Point'),
         actions: [

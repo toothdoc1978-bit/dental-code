@@ -49,9 +49,6 @@ final standPositionsProvider = StreamProvider<Map<String, Offset>>((ref) {
   return ref.watch(firestoreServiceProvider).streamStandPositions();
 });
 
-final placeModeProvider = StateProvider<bool>((ref) => false);
-final placingStandProvider = StateProvider<String?>((ref) => null);
-
 // --- Hunt log (recent completed hunts) -----------------------------------------
 
 final huntLogProvider = StreamProvider<List<Hunt>>((ref) {

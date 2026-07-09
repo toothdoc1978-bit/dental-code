@@ -14,13 +14,13 @@ const double kMapAspect = 1536 / 1344;
 
 /// The club aerial with live status pins and (in scent view) the scent cone.
 ///
-/// Green ring = open, red ring = in use. In place mode, tap the map to pin the
-/// selected stand. In scent view, tapping a pin selects it and draws its
-/// predicted scent cone; otherwise tapping a pin opens the check-in/out sheet.
+/// Green = open, red = in use, solid green pill = my stand. In scent view,
+/// tapping a pin selects it and draws its predicted scent cone; otherwise
+/// tapping a pin opens the check-in/out sheet. (Pin placement was retired
+/// once all 130 stands were set — positions are read-only club data.)
 class StandMap extends ConsumerWidget {
-  final bool allowPlacing;
   final bool scentView;
-  const StandMap({super.key, this.allowPlacing = false, this.scentView = false});
+  const StandMap({super.key, this.scentView = false});
 
   /// Computes the cone (fractional tip + vector) for the selected stand, or null.
   /// Returned as a final record so it promotes to non-null inside the
@@ -28,9 +28,8 @@ class StandMap extends ConsumerWidget {
   ({Offset tipFrac, ScentVector vector})? _coneData(
     WidgetRef ref,
     Map<String, Offset> positions,
-    bool placeMode,
   ) {
-    if (!scentView || placeMode) return null;
+    if (!scentView) return null;
     final selected = ref.watch(selectedStandProvider);
     final forecast = ref.watch(forecastProvider).valueOrNull;
     final hour = ref.watch(selectedHourProvider);
@@ -57,9 +56,7 @@ class StandMap extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final positions = ref.watch(standPositionsProvider).valueOrNull ?? const {};
     final byCode = ref.watch(activeHuntsByCodeProvider);
-    final placeMode = allowPlacing && ref.watch(placeModeProvider);
-    final placing = ref.watch(placingStandProvider);
-    final cone = _coneData(ref, positions, placeMode);
+    final cone = _coneData(ref, positions);
 
     return InteractiveViewer(
       minScale: 0.8,
@@ -70,64 +67,41 @@ class StandMap extends ConsumerWidget {
           builder: (ctx, c) {
             final w = c.maxWidth;
             final h = c.maxHeight;
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapUp: (placeMode && placing != null)
-                  ? (details) {
-                      final x = (details.localPosition.dx / w).clamp(0.0, 1.0);
-                      final y = (details.localPosition.dy / h).clamp(0.0, 1.0);
-                      ref
-                          .read(firestoreServiceProvider)
-                          .setStandPosition(placing, x, y);
-                      final placed = positions.keys.toSet()..add(placing);
-                      ref.read(placingStandProvider.notifier).state =
-                          _nextUnplaced(placed);
-                      ScaffoldMessenger.of(ctx).showSnackBar(
-                        SnackBar(
-                          duration: const Duration(milliseconds: 800),
-                          content: Text('Placed Stand $placing'),
-                        ),
-                      );
-                    }
-                  : null,
-              child: Stack(
-                children: [
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/lop_map.jpg',
+                    fit: BoxFit.fill,
+                    errorBuilder: (c, e, s) => Container(
+                      color: const Color(0xFFEAF1E6),
+                      alignment: Alignment.center,
+                      child: const Text('Add assets/lop_map.jpg'),
+                    ),
+                  ),
+                ),
+                if (cone != null)
                   Positioned.fill(
-                    child: Image.asset(
-                      'assets/lop_map.jpg',
-                      fit: BoxFit.fill,
-                      errorBuilder: (c, e, s) => Container(
-                        color: const Color(0xFFEAF1E6),
-                        alignment: Alignment.center,
-                        child: const Text('Add assets/lop_map.jpg'),
+                    child: CustomPaint(
+                      painter: ScentConePainter(
+                        tip: Offset(cone.tipFrac.dx * w, cone.tipFrac.dy * h),
+                        vector: cone.vector,
+                        northOffset: kMapNorthOffsetDegrees,
                       ),
                     ),
                   ),
-                  if (cone != null)
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: ScentConePainter(
-                          tip: Offset(cone.tipFrac.dx * w, cone.tipFrac.dy * h),
-                          vector: cone.vector,
-                          northOffset: kMapNorthOffsetDegrees,
-                        ),
-                      ),
+                for (final entry in positions.entries)
+                  if (standByCode(entry.key) != null)
+                    _pin(
+                      ctx,
+                      ref,
+                      entry.key,
+                      entry.value,
+                      w,
+                      h,
+                      hunt: byCode[entry.key],
                     ),
-                  for (final entry in positions.entries)
-                    if (standByCode(entry.key) != null)
-                      _pin(
-                        ctx,
-                        ref,
-                        entry.key,
-                        entry.value,
-                        w,
-                        h,
-                        hunt: byCode[entry.key],
-                        placeMode: placeMode,
-                        isPlacing: placing == entry.key,
-                      ),
-                ],
-              ),
+              ],
             );
           },
         ),
@@ -135,9 +109,9 @@ class StandMap extends ConsumerWidget {
     );
   }
 
-  /// A compact colored-number badge: green = open, red = in use, orange = the
-  /// stand being placed, solid green pill = MY stand. Sized relative to the
-  /// map so phone screens aren't swamped (the old rings were a fixed 26 px).
+  /// A compact colored-number badge: green = open, red = in use, solid green
+  /// pill = MY stand. Sized relative to the map so phone screens aren't
+  /// swamped (the old rings were a fixed 26 px).
   Widget _pin(
     BuildContext ctx,
     WidgetRef ref,
@@ -146,22 +120,14 @@ class StandMap extends ConsumerWidget {
     double w,
     double h, {
     required Hunt? hunt,
-    required bool placeMode,
-    required bool isPlacing,
   }) {
     final uid = ref.watch(authUidProvider);
     final mine = hunt != null && hunt.userId == uid;
     final inUse = hunt != null;
-    final selected = scentView &&
-        !placeMode &&
-        ref.watch(selectedStandProvider) == code;
+    final selected = scentView && ref.watch(selectedStandProvider) == code;
 
     final fontSize = (w * 0.014).clamp(7.0, 12.0);
-    final fg = isPlacing
-        ? Colors.orange.shade900
-        : inUse
-            ? Colors.red.shade700
-            : Colors.green.shade800;
+    final fg = inUse ? Colors.red.shade700 : Colors.green.shade800;
 
     void openSheet() => showModalBottomSheet(
           context: ctx,
@@ -178,9 +144,7 @@ class StandMap extends ConsumerWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
-            if (placeMode) {
-              ref.read(placingStandProvider.notifier).state = code;
-            } else if (scentView && mine) {
+            if (scentView && mine) {
               // Your own stand: go straight to check-out.
               openSheet();
             } else if (scentView) {
@@ -206,9 +170,7 @@ class StandMap extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(6),
                 border: selected
                     ? Border.all(color: Colors.amber.shade800, width: 1.5)
-                    : isPlacing
-                        ? Border.all(color: Colors.orange.shade800, width: 1.5)
-                        : null,
+                    : null,
               ),
               child: Text(
                 code,
@@ -226,10 +188,4 @@ class StandMap extends ConsumerWidget {
     );
   }
 
-  String? _nextUnplaced(Set<String> placed) {
-    for (final s in kStands) {
-      if (!placed.contains(s.code)) return s.code;
-    }
-    return null;
-  }
 }

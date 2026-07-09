@@ -14,56 +14,31 @@ class MapReference extends StatelessWidget {
   const MapReference({super.key});
 
   @override
-  Widget build(BuildContext context) => const StandMap(allowPlacing: false);
+  Widget build(BuildContext context) => const StandMap();
 }
 
-/// Full-screen map: scent view (tap a stand → cone + hour slider) plus an
-/// optional "Place stands" mode.
+/// Full-screen map: scent view (tap a stand → cone + hour slider).
 class MapFullScreen extends ConsumerWidget {
   const MapFullScreen({super.key});
 
-  String? _firstUnplaced(Map<String, Offset> placed) {
-    for (final s in kStands) {
-      if (!placed.containsKey(s.code)) return s.code;
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final placeMode = ref.watch(placeModeProvider);
-    final placing = ref.watch(placingStandProvider);
     final positions = ref.watch(standPositionsProvider).valueOrNull ?? const {};
 
     return Scaffold(
       appBar: AppBar(title: const Text('Club Map')),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: placeMode ? Colors.green.shade700 : null,
-        foregroundColor: placeMode ? Colors.white : null,
-        icon: Icon(placeMode ? Icons.check : Icons.edit_location_alt),
-        label: Text(placeMode ? 'Done' : 'Place stands'),
-        onPressed: () {
-          final on = !placeMode;
-          ref.read(placeModeProvider.notifier).state = on;
-          if (on) {
-            ref.read(placingStandProvider.notifier).state =
-                placing ?? _firstUnplaced(positions);
-          }
-        },
-      ),
       body: Column(
         children: [
           const HighWaterBanner(),
-          if (placeMode) _PlaceBar(),
           Expanded(
             child: Stack(
               children: [
-                const StandMap(allowPlacing: true, scentView: true),
-                if (!placeMode && positions.isEmpty) _EmptyHint(),
+                const StandMap(scentView: true),
+                if (positions.isEmpty) _EmptyHint(),
               ],
             ),
           ),
-          if (!placeMode) _ScentPanel(),
+          _ScentPanel(),
         ],
       ),
     );
@@ -232,7 +207,7 @@ class _ScentPanel extends ConsumerWidget {
   }
 }
 
-/// Centered hint shown before any pins exist.
+/// Centered notice if the shared pin data hasn't loaded (or is missing).
 class _EmptyHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -245,132 +220,13 @@ class _EmptyHint extends StatelessWidget {
             child: SizedBox(
               width: 240,
               child: Text(
-                'No stands pinned yet.\nTap “Place stands”, then tap each '
-                'stand’s spot on the photo.',
+                'No stand pins found.\nCheck your connection — pin positions '
+                'load from the club database.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.white, height: 1.3),
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Instruction + selection bar shown while placing stands.
-class _PlaceBar extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final placing = ref.watch(placingStandProvider);
-    final positions = ref.watch(standPositionsProvider).valueOrNull ?? const {};
-    final placedCount = positions.length;
-
-    return Material(
-      color: Colors.amber.shade100,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    placing == null
-                        ? 'All stands placed 🎉'
-                        : 'Placing: Stand $placing',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    placing == null
-                        ? '$placedCount of ${kStands.length} placed'
-                        : 'Tap its spot on the map · $placedCount of ${kStands.length} placed',
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            if (placing != null && positions.containsKey(placing))
-              TextButton(
-                onPressed: () => ref
-                    .read(firestoreServiceProvider)
-                    .clearStandPosition(placing),
-                child: const Text('Remove'),
-              ),
-            TextButton(
-              onPressed: () => showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                showDragHandle: true,
-                builder: (_) => _StandPicker(),
-              ),
-              child: const Text('Pick stand'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Searchable list to choose which stand to place next.
-class _StandPicker extends ConsumerStatefulWidget {
-  @override
-  ConsumerState<_StandPicker> createState() => _StandPickerState();
-}
-
-class _StandPickerState extends ConsumerState<_StandPicker> {
-  String _q = '';
-
-  @override
-  Widget build(BuildContext context) {
-    final positions = ref.watch(standPositionsProvider).valueOrNull ?? const {};
-    final list = kStands
-        .where((s) =>
-            _q.isEmpty || s.code.toLowerCase().contains(_q.toLowerCase()))
-        .toList();
-    return SafeArea(
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.6,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: TextField(
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: 'Stand number (28, 12B)…',
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                onChanged: (v) => setState(() => _q = v),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: list.length,
-                itemBuilder: (context, i) {
-                  final s = list[i];
-                  final done = positions.containsKey(s.code);
-                  return ListTile(
-                    leading: Icon(
-                      done
-                          ? Icons.check_circle
-                          : Icons.radio_button_unchecked,
-                      color: done ? Colors.green : Colors.grey,
-                    ),
-                    title: Text('Stand ${s.code}'),
-                    subtitle: Text(s.bowOnly ? 'Bow-only' : 'Gold'),
-                    onTap: () {
-                      ref.read(placingStandProvider.notifier).state = s.code;
-                      Navigator.pop(context);
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
         ),
       ),
     );

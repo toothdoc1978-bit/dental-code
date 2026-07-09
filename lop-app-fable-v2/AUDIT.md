@@ -133,6 +133,15 @@ pass unchanged; 4 new tests cover the ramp, blowout, and blend behavior.
   stale web deploy is instantly identifiable — this diagnosed the "old circles
   still showing" report (stale hosting deploy, not a code regression).
 
+## Follow-up 5: "Place stands" feature retired
+All 130 pins are placed, so the placement FAB/mode/picker were removed from
+home, the map screen, and the map widget (plus the two placement providers and
+the two Firestore write methods). `standPositions` is now **read-only in the
+security rules** — pins can't be moved or deleted by any client; corrections
+go through the Firebase console. Note: older installed builds (the original
+iPad app) still contain the placement UI, but the read-only rules make it
+inert once published.
+
 ## Verification log
 - Baseline: analyze 0 errors / 11 infos; 9/9 tests pass.
 - After feature work: analyze **0 issues**; **35/35 tests pass**

@@ -32,9 +32,9 @@ and change log). The original app lives untouched in `lop-app/` on `main`.
   Check-out is one tap from the banner, your list row, or your pin on the map.
 - **Live occupancy + texting** — real-time via Firestore; tap an occupied stand
   to see who/what and **Text** them.
-- **Aerial map** — pan/zoom photo (`assets/lop_map.jpg`); tap-to-place pins
-  (shared via Firebase) shown as hollow rings — green (open) / red (in use) —
-  so the printed stand numbers stay visible.
+- **Aerial map** — pan/zoom photo (`assets/lop_map.jpg`) with all 130 stand
+  pins (shared via Firebase, now read-only — placement was retired once every
+  stand was pinned; corrections happen in the Firebase console).
 - **Scent-drift prediction** — per-stand hourly wind + thermal drift, computed
   from Open-Meteo (keyless) and drawn as a rotating, fading cone with a
   24-hour slider that starts at the hour containing *now*. Physics: the true
