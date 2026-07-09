@@ -19,7 +19,7 @@ class StandList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stands = ref.watch(standsProvider);
     final byCode = ref.watch(activeHuntsByCodeProvider);
-    final uid = ref.watch(authUidProvider);
+    final memberId = ref.watch(currentMemberProvider)?.id;
     final query = ref.watch(searchQueryProvider).trim().toLowerCase();
     final filter = ref.watch(standFilterProvider);
 
@@ -46,7 +46,7 @@ class StandList extends ConsumerWidget {
       itemBuilder: (context, i) {
         final stand = filtered[i];
         final hunt = byCode[stand.code];
-        final mine = hunt != null && hunt.userId == uid;
+        final mine = hunt != null && hunt.memberId == memberId;
 
         final Color dotColor = hunt != null
             ? (mine ? Colors.green.shade700 : Colors.grey.shade500)
@@ -116,12 +116,9 @@ class StandList extends ConsumerWidget {
                       onPressed: () => _jumpToMap(context, ref, stand),
                     ),
                     if (hunt != null)
-                      Chip(
-                        label: const Text('In use'),
-                        visualDensity: VisualDensity.compact,
-                        backgroundColor: Colors.grey.shade300,
-                        side: BorderSide.none,
-                      )
+                      Text('In use',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey.shade600))
                     else
                       const Icon(Icons.chevron_right),
                   ],

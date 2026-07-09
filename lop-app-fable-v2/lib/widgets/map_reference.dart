@@ -123,9 +123,10 @@ class _ScentPanel extends ConsumerWidget {
   Widget _wrap(
       BuildContext context, WidgetRef ref, String code, Widget body) {
     // "Check Out" (red) when the selected stand is mine, so ending a hunt from
-    // the map is unmissable.
+    // the map is unmissable. "Mine" = my member identity, any device.
     final hunt = ref.watch(activeHuntsByCodeProvider)[code];
-    final mine = hunt != null && hunt.userId == ref.watch(authUidProvider);
+    final mine =
+        hunt != null && hunt.memberId == ref.watch(currentMemberProvider)?.id;
     return Container(
       width: double.infinity,
       color: Colors.green.shade50,

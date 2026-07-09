@@ -40,7 +40,7 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final uid = ref.watch(authUidProvider);
+    final memberId = ref.watch(currentMemberProvider)?.id;
     final hunt = ref.watch(activeHuntsByCodeProvider)[stand.code];
     final myHunt = ref.watch(myActiveHuntProvider).valueOrNull;
 
@@ -59,7 +59,7 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
           const SizedBox(height: 16),
           if (hunt == null)
             _openBody(myHunt)
-          else if (hunt.userId == uid)
+          else if (hunt.memberId == memberId)
             _mineBody(hunt)
           else
             _takenBody(hunt),
@@ -346,6 +346,9 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
         SnackBar(content: Text('Checked in to Stand ${stand.code}')),
       );
     } on StandOccupiedException catch (e) {
+      if (mounted) setState(() => _busy = false);
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
+    } on AlreadyCheckedInException catch (e) {
       if (mounted) setState(() => _busy = false);
       messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     } catch (e) {

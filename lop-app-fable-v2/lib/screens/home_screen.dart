@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/stands_data.dart';
 import '../providers/app_providers.dart';
+import '../services/ack_store.dart';
 import '../services/member_store.dart';
 import '../utils/format.dart';
 import '../widgets/high_water_banner.dart';
@@ -98,6 +100,7 @@ class HomeScreen extends ConsumerWidget {
         children: [
           const HighWaterBanner(),
           const _MyHuntBanner(),
+          const _ForgotCheckoutNotice(),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -289,6 +292,69 @@ class _MyHuntBannerState extends ConsumerState<_MyHuntBanner> {
                         builder: (_) => StandDetailSheet(stand: stand),
                       ),
               child: const Text('Check Out'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One-time amber notice when YOUR latest hunt was ended by the 8 PM sweep —
+/// the "you forgot to check out" message. Dismiss remembers per hunt.
+class _ForgotCheckoutNotice extends ConsumerStatefulWidget {
+  const _ForgotCheckoutNotice();
+
+  @override
+  ConsumerState<_ForgotCheckoutNotice> createState() =>
+      _ForgotCheckoutNoticeState();
+}
+
+class _ForgotCheckoutNoticeState extends ConsumerState<_ForgotCheckoutNotice> {
+  String? _acked;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AckStore.lastAcked().then((v) {
+      if (mounted) setState(() { _acked = v; _loaded = true; });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded) return const SizedBox.shrink();
+    final member = ref.watch(currentMemberProvider);
+    final recent = ref.watch(huntLogProvider).valueOrNull ?? const [];
+    final myLatest =
+        recent.where((h) => h.memberId == member?.id).firstOrNull;
+    if (myLatest == null || !myLatest.autoClosed || myLatest.id == _acked) {
+      return const SizedBox.shrink();
+    }
+
+    return Material(
+      color: Colors.amber.shade100,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 6, 4, 6),
+        child: Row(
+          children: [
+            Icon(Icons.timer_off, size: 18, color: Colors.amber.shade900),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'You were auto-checked out of Stand ${myLatest.standCode} at '
+                '8 PM — please check out when you leave your stand.',
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              tooltip: 'Dismiss',
+              onPressed: () {
+                AckStore.ack(myLatest.id);
+                setState(() => _acked = myLatest.id);
+              },
             ),
           ],
         ),

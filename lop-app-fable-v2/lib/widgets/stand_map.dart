@@ -121,8 +121,8 @@ class StandMap extends ConsumerWidget {
     double h, {
     required Hunt? hunt,
   }) {
-    final uid = ref.watch(authUidProvider);
-    final mine = hunt != null && hunt.userId == uid;
+    final memberId = ref.watch(currentMemberProvider)?.id;
+    final mine = hunt != null && hunt.memberId == memberId;
     final inUse = hunt != null;
     final selected = scentView && ref.watch(selectedStandProvider) == code;
 

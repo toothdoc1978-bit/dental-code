@@ -1,5 +1,6 @@
 import 'dart:ui' show Offset;
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../config.dart';
 import '../models/hunt.dart';
 import '../models/member.dart';
 import '../models/stand.dart';
@@ -10,6 +11,16 @@ class StandOccupiedException implements Exception {
   StandOccupiedException(this.standCode);
   @override
   String toString() => 'Stand $standCode is already taken.';
+}
+
+/// Thrown when a member who already has an active hunt (possibly started on
+/// another device) tries to check in somewhere else.
+class AlreadyCheckedInException implements Exception {
+  final String standCode;
+  AlreadyCheckedInException(this.standCode);
+  @override
+  String toString() =>
+      "You're already checked in at Stand $standCode. Check out there first.";
 }
 
 /// All Firestore reads/writes live here.
@@ -39,6 +50,16 @@ class FirestoreService {
     double? riverVicksburgFt,
     double? riverGreenvilleFt,
   }) async {
+    // One hunt per member, no matter which device started it.
+    final mine = await _hunts
+        .where('memberId', isEqualTo: member.id)
+        .where('active', isEqualTo: true)
+        .limit(1)
+        .get();
+    if (mine.docs.isNotEmpty) {
+      throw AlreadyCheckedInException(Hunt.fromDoc(mine.docs.first).standCode);
+    }
+
     final existing = await _hunts
         .where('standCode', isEqualTo: stand.code)
         .where('active', isEqualTo: true)
@@ -101,13 +122,53 @@ class FirestoreService {
             snap.docs.map(Hunt.fromDoc).where((h) => !h.active).toList());
   }
 
-  Stream<Hunt?> streamMyActiveHunt(String userId) {
+  /// The member's active hunt from ANY device — ownership is keyed to the
+  /// chosen member identity, not the device's anonymous auth id.
+  Stream<Hunt?> streamMyActiveHunt(String memberId) {
     return _hunts
-        .where('userId', isEqualTo: userId)
+        .where('memberId', isEqualTo: memberId)
         .where('active', isEqualTo: true)
         .limit(1)
         .snapshots()
         .map((snap) => snap.docs.isEmpty ? null : Hunt.fromDoc(snap.docs.first));
+  }
+
+  // --- 8 PM daily auto-checkout ----------------------------------------------
+
+  /// Whether an active hunt should be swept: true once [now] is past the most
+  /// recent [hour]:00 AND the hunt started before that cutoff. A hunt begun
+  /// AFTER 8 PM survives until the next evening's sweep.
+  static bool shouldAutoClose(DateTime checkInTime, DateTime now,
+      {int hour = kAutoCheckoutHour}) {
+    var cutoff = DateTime(now.year, now.month, now.day, hour);
+    if (now.isBefore(cutoff)) cutoff = cutoff.subtract(const Duration(days: 1));
+    return checkInTime.isBefore(cutoff);
+  }
+
+  /// Closes every active hunt that's past the 8 PM cutoff ([force] closes all
+  /// of them — the admin "clear the board" action). Deer counts stay null —
+  /// forfeited by not checking out. Returns how many hunts were closed;
+  /// failures are swallowed (the next device to run will retry).
+  Future<int> autoCheckoutSweep({bool force = false, DateTime? now}) async {
+    try {
+      final snap = await _hunts.where('active', isEqualTo: true).get();
+      final n = now ?? DateTime.now();
+      var closed = 0;
+      for (final doc in snap.docs) {
+        final ci = (doc.data()['checkInTime'] as Timestamp?)?.toDate();
+        if (force || (ci != null && shouldAutoClose(ci, n))) {
+          await doc.reference.update({
+            'active': false,
+            'checkOutTime': FieldValue.serverTimestamp(),
+            'autoClosed': true,
+          });
+          closed++;
+        }
+      }
+      return closed;
+    } catch (_) {
+      return 0;
+    }
   }
 
   // --- Stand pin positions (shared) ------------------------------------------

@@ -204,7 +204,8 @@ class _HuntTile extends StatelessWidget {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (times.isNotEmpty) Text('$times$dur'),
+          if (times.isNotEmpty)
+            Text('$times$dur${hunt.autoClosed ? ' · auto 8 PM' : ''}'),
           if (deer.isNotEmpty)
             Text(deer, style: TextStyle(color: Colors.brown.shade700)),
           if (river.isNotEmpty)

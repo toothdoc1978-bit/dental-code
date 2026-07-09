@@ -10,6 +10,7 @@ import 'firebase_options.dart';
 import 'providers/app_providers.dart';
 import 'screens/home_screen.dart';
 import 'screens/member_picker_screen.dart';
+import 'services/firestore_service.dart';
 import 'services/member_store.dart';
 import 'services/river_service.dart';
 import 'services/weather_service.dart';
@@ -72,6 +73,7 @@ class _AuthGate extends ConsumerStatefulWidget {
 
 class _AuthGateState extends ConsumerState<_AuthGate> {
   late final Future<void> _signIn = _doSignIn();
+  Timer? _sweepTimer;
 
   Future<void> _doSignIn() async {
     final auth = FirebaseAuth.instance;
@@ -81,6 +83,19 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
     // fresh — the first device per window fetches, everyone else just reads).
     unawaited(WeatherService().ensureFreshForecast());
     unawaited(RiverService().ensureFreshStatus());
+    // 8 PM auto-checkout: sweep now, then re-check every 15 minutes so a
+    // phone left open clears the board at the cutoff.
+    unawaited(FirestoreService().autoCheckoutSweep());
+    _sweepTimer = Timer.periodic(
+      const Duration(minutes: 15),
+      (_) => unawaited(FirestoreService().autoCheckoutSweep()),
+    );
+  }
+
+  @override
+  void dispose() {
+    _sweepTimer?.cancel();
+    super.dispose();
   }
 
   @override

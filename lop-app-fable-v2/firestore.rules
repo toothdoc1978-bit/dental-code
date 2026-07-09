@@ -34,14 +34,18 @@ service cloud.firestore {
         && request.resource.data.buckSeen == null
         && request.resource.data.fawnSeen == null;
 
-      // Check-out: only the hunt's owner, only the check-out fields, and only
-      // while the hunt is still active (history can't be rewritten).
+      // Check-out: only the check-out fields, one-way active -> false, valid
+      // counts. Any signed-in club device may perform it: ownership is keyed
+      // to the self-declared member identity (so a member can check out from
+      // any of their devices) and the 8 PM sweep closes forgotten hunts —
+      // neither is verifiable under anonymous auth, so a device-owner check
+      // here would only break those flows without adding real security.
       allow update: if request.auth != null
-        && resource.data.userId == request.auth.uid
         && resource.data.active == true
         && request.resource.data.active == false
         && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['active', 'checkOutTime', 'doeSeen', 'buckSeen', 'fawnSeen'])
+            .hasOnly(['active', 'checkOutTime', 'doeSeen', 'buckSeen',
+                      'fawnSeen', 'autoClosed'])
         && validCount(request.resource.data.doeSeen)
         && validCount(request.resource.data.buckSeen)
         && validCount(request.resource.data.fawnSeen);

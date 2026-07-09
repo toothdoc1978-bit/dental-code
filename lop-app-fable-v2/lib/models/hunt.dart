@@ -27,6 +27,10 @@ class Hunt {
   final double? riverVicksburgFt;
   final double? riverGreenvilleFt;
 
+  /// True when the hunt was ended by the 8 PM sweep (or an admin clear)
+  /// instead of the hunter checking out.
+  final bool autoClosed;
+
   const Hunt({
     required this.id,
     required this.standCode,
@@ -43,6 +47,7 @@ class Hunt {
     this.fawnSeen,
     this.riverVicksburgFt,
     this.riverGreenvilleFt,
+    this.autoClosed = false,
   });
 
   String get memberFirstName =>
@@ -66,6 +71,7 @@ class Hunt {
       fawnSeen: (data['fawnSeen'] as num?)?.toInt(),
       riverVicksburgFt: (data['riverVicksburgFt'] as num?)?.toDouble(),
       riverGreenvilleFt: (data['riverGreenvilleFt'] as num?)?.toDouble(),
+      autoClosed: data['autoClosed'] as bool? ?? false,
     );
   }
 }

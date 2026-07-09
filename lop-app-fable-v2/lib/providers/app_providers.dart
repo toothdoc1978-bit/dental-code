@@ -37,10 +37,12 @@ final activeHuntsByCodeProvider = Provider<Map<String, Hunt>>((ref) {
   return {for (final h in hunts) h.standCode: h};
 });
 
+/// MY active hunt — keyed to the chosen member (works across devices), not
+/// the device's anonymous auth id.
 final myActiveHuntProvider = StreamProvider<Hunt?>((ref) {
-  final uid = ref.watch(authUidProvider);
-  if (uid == null) return Stream.value(null);
-  return ref.watch(firestoreServiceProvider).streamMyActiveHunt(uid);
+  final member = ref.watch(currentMemberProvider);
+  if (member == null) return Stream.value(null);
+  return ref.watch(firestoreServiceProvider).streamMyActiveHunt(member.id);
 });
 
 // --- Map pins (shared positions of each stand on the photo) -------------------

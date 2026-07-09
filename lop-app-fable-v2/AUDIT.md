@@ -142,6 +142,25 @@ go through the Firebase console. Note: older installed builds (the original
 iPad app) still contain the placement UI, but the read-only rules make it
 inert once published.
 
+## Follow-up 6: member-identity ownership, 8 PM auto-checkout, admin clear (v2.3)
+- **Ownership bug fix**: "mine" was keyed to the device's anonymous auth uid,
+  so a hunt started on one device looked like a stranger's on another (no
+  banner, no checkout, could double-check-in). Now keyed to the chosen
+  member id everywhere (`myActiveHuntProvider`, list rows, map pins, panel,
+  detail sheet), and `checkIn()` blocks a member who already has an active
+  hunt on ANY device (`AlreadyCheckedInException`). Rules: hunts update drops
+  the device-owner check (member identity is self-declared under anon auth
+  anyway) but keeps one-way active→false + field whitelist + count bounds.
+- **8 PM auto-checkout**: client-side sweep (`shouldAutoClose` pure +
+  `autoCheckoutSweep`), run at startup and every 15 min; closes hunts past
+  the most recent 8 PM cutoff with `autoClosed: true` (deer counts forfeited).
+  Hunts started after 8 PM survive until the next evening. Forgot-to-check-out
+  members get a dismissible amber notice on home (per-hunt ack in
+  SharedPreferences); hunt-log rows show "· auto 8 PM". In-app notice chosen
+  over push (free, no Blaze); FCM push is the future upgrade path.
+- **Admin "End all active hunts now"** in the Conditions admin card (confirm
+  dialog) — clears test data or a stuck board in one tap.
+
 ## Verification log
 - Baseline: analyze 0 errors / 11 infos; 9/9 tests pass.
 - After feature work: analyze **0 issues**; **35/35 tests pass**

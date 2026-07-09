@@ -105,10 +105,56 @@ class _AdminCard extends ConsumerWidget {
               'back OFF below ${kHighWaterOffFt.toStringAsFixed(1)} ft.',
               style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
             ),
+            const Divider(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red.shade700),
+                icon: const Icon(Icons.clear_all),
+                label: const Text('End all active hunts now'),
+                onPressed: () => _endAll(context, ref),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Clears the whole board (testing, or a stuck check-in). Every '
+              'active hunt also auto-ends daily at 8 PM.',
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _endAll(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('End all active hunts?'),
+        content: const Text(
+            'Everyone currently checked in will be checked out. Deer counts '
+            'for those hunts will not be recorded.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: Colors.red.shade700),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('End all')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final n = await ref
+        .read(firestoreServiceProvider)
+        .autoCheckoutSweep(force: true);
+    messenger.showSnackBar(
+        SnackBar(content: Text('Ended $n active hunt${n == 1 ? '' : 's'}')));
   }
 }
 

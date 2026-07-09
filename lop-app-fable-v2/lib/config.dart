@@ -2,7 +2,11 @@
 // rule, and admin access.
 
 /// Shown in-app so you can tell at a glance which build is deployed.
-const String kAppVersion = 'v2.2';
+const String kAppVersion = 'v2.3';
+
+/// Every active hunt is auto-checked-out daily at this hour (24h clock).
+/// Enforced client-side: the first running app past the hour sweeps the board.
+const int kAutoCheckoutHour = 20; // 8 PM
 
 /// Members who see Admin controls (high-water override). UI-level gating —
 /// fine for a trusted club on anonymous auth.

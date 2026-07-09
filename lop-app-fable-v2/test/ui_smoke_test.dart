@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:lop_app/models/club_status.dart';
 import 'package:lop_app/models/forecast.dart';
@@ -24,7 +25,10 @@ Hunt _hunt({
   String standCode = '28',
   String huntType = 'Rifle',
   String userId = 'uid-me',
+  String memberId = 'm01',
+  String memberName = 'David Ditch',
   bool active = true,
+  bool autoClosed = false,
   DateTime? checkIn,
   DateTime? checkOut,
   int? doe,
@@ -34,10 +38,11 @@ Hunt _hunt({
       id: id,
       standCode: standCode,
       huntType: huntType,
-      memberId: 'm01',
-      memberName: 'David Ditch',
+      memberId: memberId,
+      memberName: memberName,
       memberPhone: '555-111-2222',
       userId: userId,
+      autoClosed: autoClosed,
       active: active,
       checkInTime: checkIn ?? DateTime.now().subtract(const Duration(hours: 2)),
       checkOutTime: checkOut,
@@ -72,6 +77,7 @@ Widget _app({List<Override> overrides = const [], Widget home = const HomeScreen
 List<Override> _baseOverrides({
   Hunt? myHunt,
   List<Hunt> active = const [],
+  List<Hunt>? log,
   ClubStatus? club,
   Member member = _me,
 }) =>
@@ -90,7 +96,8 @@ List<Override> _baseOverrides({
             greenville: const GaugeStatus(observedFt: 18.9, forecastFt: 18.9),
             waterTempF: 84,
           ))),
-      huntLogProvider.overrideWith((ref) => Stream.value([
+      huntLogProvider.overrideWith((ref) => Stream.value(log ??
+          [
             _hunt(
               id: 'done1',
               active: false,
@@ -103,6 +110,8 @@ List<Override> _baseOverrides({
     ];
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('home shows open/in-use counts and a Conditions button',
       (tester) async {
     await tester.pumpWidget(_app(overrides: _baseOverrides(active: [_hunt()])));
@@ -139,13 +148,59 @@ void main() {
 
   testWidgets('my stand row shows a red Check Out button', (tester) async {
     // Stand 1 so the row is at the top of the (lazy) list and gets built.
-    final mine = _hunt(standCode: '1', userId: 'uid-me');
+    final mine = _hunt(standCode: '1', memberId: 'm99', memberName: _me.name);
     await tester.pumpWidget(
         _app(overrides: _baseOverrides(myHunt: mine, active: [mine])));
     await tester.pump();
 
     // One in the banner, one on the row.
     expect(find.text('Check Out'), findsNWidgets(2));
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+      'hunt started on ANOTHER device still shows as mine (member identity)',
+      (tester) async {
+    // Same member id, totally different anonymous device uid.
+    final mine = _hunt(
+        standCode: '1',
+        memberId: 'm99',
+        memberName: _me.name,
+        userId: 'some-other-device');
+    await tester.pumpWidget(
+        _app(overrides: _baseOverrides(myHunt: mine, active: [mine])));
+    await tester.pump();
+
+    // Banner + row Check Out both present, and no "Text" option for myself.
+    expect(find.text('Check Out'), findsNWidgets(2));
+    expect(find.textContaining("You're on Stand 1"), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('forgot-to-check-out notice shows for my auto-closed hunt',
+      (tester) async {
+    final swept = _hunt(
+      id: 'swept1',
+      standCode: '7',
+      memberId: 'm99',
+      memberName: _me.name,
+      active: false,
+      autoClosed: true,
+      checkIn: DateTime(2026, 7, 8, 15, 0),
+      checkOut: DateTime(2026, 7, 8, 20, 0),
+    );
+    await tester.pumpWidget(_app(overrides: _baseOverrides(log: [swept])));
+    await tester.pump(); // streams deliver
+    await tester.pump(); // AckStore future resolves -> notice renders
+
+    expect(find.textContaining('auto-checked out of Stand 7'), findsOneWidget);
+
+    // Dismiss hides it.
+    await tester.tap(find.byTooltip('Dismiss'));
+    await tester.pump();
+    expect(find.textContaining('auto-checked out'), findsNothing);
 
     await tester.pumpWidget(const SizedBox());
   });
@@ -224,6 +279,7 @@ void main() {
     await tester.pump();
     expect(find.textContaining('Admin'), findsOneWidget);
     expect(find.text('Force ON'), findsOneWidget);
+    expect(find.text('End all active hunts now'), findsOneWidget);
 
     // Tear down before re-pumping: a ProviderScope's overrides must not
     // change in place, so the second pump needs a fresh tree.
