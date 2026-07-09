@@ -21,10 +21,15 @@ and change log). The original app lives untouched in `lop-app/` on `main`.
 - **Hunt Log** 🆕 — history button on the home screen: season totals (hunts, hours
   on stand, bucks/does/fawns) plus every completed hunt grouped by day, with
   times, duration, deer seen, and river stage. "Mine" filter for your own season.
-- **River status on home** 🆕 — live Vicksburg & Greenville stages with
-  rising/falling/steady arrows (observed vs NOAA forecast), cached to one shared
-  Firestore doc (`riverStatus/current`, 1-hour TTL) so one member's fetch serves
-  everyone.
+- **Conditions screen** 🆕 — one tap from home: current temp / wind / cloud
+  cover / scent behavior, an hour-by-hour 24 h table, and the Mississippi
+  River card (Vicksburg & Greenville stages with rising/falling arrows, water
+  temperature). River data cached to one shared Firestore doc
+  (`riverStatus/current`, 1-hour TTL) so one member's fetch serves everyone.
+  The home screen stays clean: open/in-use counts + a Conditions button.
+- **Phone-friendly map pins** 🆕 — stands render as compact colored numbers
+  (green = open, red = in use, solid green pill = you), sized to the screen.
+  Check-out is one tap from the banner, your list row, or your pin on the map.
 - **Live occupancy + texting** — real-time via Firestore; tap an occupied stand
   to see who/what and **Text** them.
 - **Aerial map** — pan/zoom photo (`assets/lop_map.jpg`); tap-to-place pins

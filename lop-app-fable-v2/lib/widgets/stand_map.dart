@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config.dart';
 import '../data/stands_data.dart';
+import '../models/hunt.dart';
 import '../providers/app_providers.dart';
 import '../services/scent_vector.dart';
 import 'scent_cone_painter.dart';
@@ -121,9 +122,9 @@ class StandMap extends ConsumerWidget {
                         entry.value,
                         w,
                         h,
-                        byCode.containsKey(entry.key),
-                        placeMode,
-                        placing == entry.key,
+                        hunt: byCode[entry.key],
+                        placeMode: placeMode,
+                        isPlacing: placing == entry.key,
                       ),
                 ],
               ),
@@ -134,51 +135,91 @@ class StandMap extends ConsumerWidget {
     );
   }
 
+  /// A compact colored-number badge: green = open, red = in use, orange = the
+  /// stand being placed, solid green pill = MY stand. Sized relative to the
+  /// map so phone screens aren't swamped (the old rings were a fixed 26 px).
   Widget _pin(
     BuildContext ctx,
     WidgetRef ref,
     String code,
     Offset frac,
     double w,
-    double h,
-    bool inUse,
-    bool placeMode,
-    bool isPlacing,
-  ) {
-    const double size = 26;
-    final base = inUse ? Colors.red : Colors.green;
-    final ring = isPlacing ? Colors.orange : base;
-    // Hollow ring so the stand number printed on the map stays visible.
+    double h, {
+    required Hunt? hunt,
+    required bool placeMode,
+    required bool isPlacing,
+  }) {
+    final uid = ref.watch(authUidProvider);
+    final mine = hunt != null && hunt.userId == uid;
+    final inUse = hunt != null;
+    final selected = scentView &&
+        !placeMode &&
+        ref.watch(selectedStandProvider) == code;
+
+    final fontSize = (w * 0.014).clamp(7.0, 12.0);
+    final fg = isPlacing
+        ? Colors.orange.shade900
+        : inUse
+            ? Colors.red.shade700
+            : Colors.green.shade800;
+
+    void openSheet() => showModalBottomSheet(
+          context: ctx,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: (_) => StandDetailSheet(stand: standByCode(code)!),
+        );
+
     return Positioned(
-      left: frac.dx * w - size / 2,
-      top: frac.dy * h - size / 2,
-      child: GestureDetector(
-        onTap: () {
-          if (placeMode) {
-            ref.read(placingStandProvider.notifier).state = code;
-          } else if (scentView) {
-            ref.read(selectedStandProvider.notifier).state = code;
-            // Start the slider at the hour containing "now", not the (possibly
-            // stale) first cached hour.
-            ref.read(selectedHourProvider.notifier).state =
-                ref.read(forecastProvider).valueOrNull?.indexForNow() ?? 0;
-          } else {
-            showModalBottomSheet(
-              context: ctx,
-              isScrollControlled: true,
-              showDragHandle: true,
-              builder: (_) => StandDetailSheet(stand: standByCode(code)!),
-            );
-          }
-        },
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color:
-                inUse ? Colors.red.withValues(alpha: 0.30) : Colors.transparent,
-            border: Border.all(color: ring, width: 3),
+      left: frac.dx * w,
+      top: frac.dy * h,
+      child: FractionalTranslation(
+        translation: const Offset(-0.5, -0.5),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            if (placeMode) {
+              ref.read(placingStandProvider.notifier).state = code;
+            } else if (scentView && mine) {
+              // Your own stand: go straight to check-out.
+              openSheet();
+            } else if (scentView) {
+              ref.read(selectedStandProvider.notifier).state = code;
+              // Start the slider at the hour containing "now", not the
+              // (possibly stale) first cached hour.
+              ref.read(selectedHourProvider.notifier).state =
+                  ref.read(forecastProvider).valueOrNull?.indexForNow() ?? 0;
+            } else {
+              openSheet();
+            }
+          },
+          // Transparent padding keeps a finger-sized tap target around the
+          // small label.
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+              decoration: BoxDecoration(
+                color: mine
+                    ? Colors.green.shade700
+                    : Colors.white.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(6),
+                border: selected
+                    ? Border.all(color: Colors.amber.shade800, width: 1.5)
+                    : isPlacing
+                        ? Border.all(color: Colors.orange.shade800, width: 1.5)
+                        : null,
+              ),
+              child: Text(
+                code,
+                style: TextStyle(
+                  fontSize: fontSize,
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                  color: mine ? Colors.white : fg,
+                ),
+              ),
+            ),
           ),
         ),
       ),

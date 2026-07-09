@@ -90,28 +90,42 @@ class StandList extends ConsumerWidget {
                   stand.bowOnly ? 'Open · bow-only' : 'Open',
                   style: TextStyle(color: Colors.green.shade700),
                 ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                tooltip: 'Show on map',
-                icon: Icon(Icons.map_outlined,
-                    size: 20, color: Colors.green.shade800),
-                visualDensity: VisualDensity.compact,
-                onPressed: () => _jumpToMap(context, ref, stand),
-              ),
-              if (hunt != null)
-                Chip(
-                  label: Text(mine ? 'You' : 'In use'),
-                  visualDensity: VisualDensity.compact,
-                  backgroundColor:
-                      mine ? Colors.green.shade100 : Colors.grey.shade300,
-                  side: BorderSide.none,
+          // My row: the whole trailing slot is one compact red Check Out
+          // button (the priority action). Other rows: map jump + status.
+          trailing: mine
+              ? FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.red.shade700,
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    textStyle: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: () => _openSheet(context, stand),
+                  child: const Text('Check Out'),
                 )
-              else
-                const Icon(Icons.chevron_right),
-            ],
-          ),
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      tooltip: 'Show on map',
+                      icon: Icon(Icons.map_outlined,
+                          size: 20, color: Colors.green.shade800),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _jumpToMap(context, ref, stand),
+                    ),
+                    if (hunt != null)
+                      Chip(
+                        label: const Text('In use'),
+                        visualDensity: VisualDensity.compact,
+                        backgroundColor: Colors.grey.shade300,
+                        side: BorderSide.none,
+                      )
+                    else
+                      const Icon(Icons.chevron_right),
+                  ],
+                ),
           onTap: () => _openSheet(context, stand),
         );
       },

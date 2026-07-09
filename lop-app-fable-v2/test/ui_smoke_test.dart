@@ -10,6 +10,7 @@ import 'package:lop_app/models/hunt.dart';
 import 'package:lop_app/models/member.dart';
 import 'package:lop_app/models/river_status.dart';
 import 'package:lop_app/providers/app_providers.dart';
+import 'package:lop_app/screens/conditions_screen.dart';
 import 'package:lop_app/screens/home_screen.dart';
 import 'package:lop_app/screens/hunt_log_screen.dart';
 
@@ -78,6 +79,7 @@ List<Override> _baseOverrides({Hunt? myHunt, List<Hunt> active = const []}) => [
             fetchedAt: DateTime.now(),
             vicksburg: const GaugeStatus(observedFt: 21.3, forecastFt: 23.0),
             greenville: const GaugeStatus(observedFt: 18.9, forecastFt: 18.9),
+            waterTempF: 84,
           ))),
       huntLogProvider.overrideWith((ref) => Stream.value([
             _hunt(
@@ -92,21 +94,51 @@ List<Override> _baseOverrides({Hunt? myHunt, List<Hunt> active = const []}) => [
     ];
 
 void main() {
-  testWidgets('home renders status chips: open count, wind, river trend',
+  testWidgets('home shows open/in-use counts and a Conditions button',
       (tester) async {
     await tester.pumpWidget(_app(overrides: _baseOverrides(active: [_hunt()])));
     await tester.pump(); // let streams deliver
 
     expect(find.text('129 open'), findsOneWidget);
     expect(find.text('1 in use'), findsOneWidget);
-    // N wind 8 mph -> scent blows S.
-    expect(find.textContaining('Wind N 8'), findsOneWidget);
-    expect(find.textContaining('scent S'), findsOneWidget);
-    // River chip with rising Vicksburg and steady Greenville.
-    expect(find.textContaining('Vburg 21.3′ ↗'), findsOneWidget);
-    expect(find.textContaining('Gville 18.9′ →'), findsOneWidget);
+    // Weather/river details moved off the home screen behind Conditions.
+    expect(find.text('Conditions'), findsOneWidget);
+    expect(find.textContaining('Vburg'), findsNothing);
+    expect(find.textContaining('Wind'), findsNothing);
 
     await tester.pumpWidget(const SizedBox()); // dispose timers
+  });
+
+  testWidgets('conditions screen shows weather, hourly, and river stages',
+      (tester) async {
+    await tester.pumpWidget(_app(
+        overrides: _baseOverrides(), home: const ConditionsScreen()));
+    await tester.pump();
+
+    expect(find.text('Right now'), findsOneWidget);
+    expect(find.textContaining('Wind N 8 mph'), findsOneWidget);
+    expect(find.textContaining('% cloud cover'), findsOneWidget);
+    expect(find.text('Mississippi River'), findsOneWidget);
+    expect(find.text('21.3 ft'), findsOneWidget); // Vicksburg
+    expect(find.textContaining('↗ rising'), findsOneWidget);
+    expect(find.text('18.9 ft'), findsOneWidget); // Greenville
+    expect(find.textContaining('Water temperature'), findsOneWidget);
+    expect(find.text('Next 24 hours'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('my stand row shows a red Check Out button', (tester) async {
+    // Stand 1 so the row is at the top of the (lazy) list and gets built.
+    final mine = _hunt(standCode: '1', userId: 'uid-me');
+    await tester.pumpWidget(
+        _app(overrides: _baseOverrides(myHunt: mine, active: [mine])));
+    await tester.pump();
+
+    // One in the banner, one on the row.
+    expect(find.text('Check Out'), findsNWidgets(2));
+
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('my-hunt banner shows when checked in and ticks elapsed',

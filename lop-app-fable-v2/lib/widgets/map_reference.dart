@@ -145,6 +145,10 @@ class _ScentPanel extends ConsumerWidget {
 
   Widget _wrap(
       BuildContext context, WidgetRef ref, String code, Widget body) {
+    // "Check Out" (red) when the selected stand is mine, so ending a hunt from
+    // the map is unmissable.
+    final hunt = ref.watch(activeHuntsByCodeProvider)[code];
+    final mine = hunt != null && hunt.userId == ref.watch(authUidProvider);
     return Container(
       width: double.infinity,
       color: Colors.green.shade50,
@@ -161,6 +165,13 @@ class _ScentPanel extends ConsumerWidget {
                         fontSize: 16, fontWeight: FontWeight.bold)),
               ),
               TextButton(
+                style: mine
+                    ? TextButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                        textStyle:
+                            const TextStyle(fontWeight: FontWeight.bold),
+                      )
+                    : null,
                 onPressed: () {
                   final stand = standByCode(code);
                   if (stand != null) {
@@ -172,7 +183,7 @@ class _ScentPanel extends ConsumerWidget {
                     );
                   }
                 },
-                child: const Text('Check in / out'),
+                child: Text(mine ? 'Check Out' : 'Check in / out'),
               ),
               IconButton(
                 icon: const Icon(Icons.close),

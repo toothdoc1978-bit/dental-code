@@ -88,6 +88,26 @@ pass unchanged; 4 new tests cover the ramp, blowout, and blend behavior.
   when the adjustment is active so mislabeled stands are easy to spot.
 - Tests: 46 total; all 10 pre-existing physics tests pass unchanged.
 
+## Follow-up 3: usability pass from member feedback (web launch)
+- **Map pins → colored numbers**: the fixed 26 px rings swamped iPhone screens.
+  Pins are now compact stand-number badges — green (open) / red (in use) /
+  orange (placing) on a translucent white pill, sized relative to map width
+  (clamped 7–12 px font) with a padded finger-size tap target. *My* stand is a
+  solid green pill with white text; the scent-selected stand gets an amber
+  outline.
+- **Check-out made obvious**: my stand-list row shows a red **Check Out**
+  button; the map scent panel's button turns into a bold red **Check Out** when
+  the selected stand is mine; tapping my own stand on the map opens the
+  check-out sheet directly. (Banner unchanged — it already had one.)
+- **Conditions screen** (`lib/screens/conditions_screen.dart`): wind/scent and
+  river chips are gone from the home status row (member feedback: too
+  prominent). Home now shows open/in-use counts + a "Conditions" chip (and a
+  cloud icon in the app bar) leading to: current temp/wind/clouds/scent
+  behavior, an hour-by-hour 24 h table, and the river card (stages, trends,
+  water temp). No new data fetches — it reads the same cached providers.
+- Tests: 48 total (Conditions screen render, check-out button row, home
+  chip changes).
+
 ## Verification log
 - Baseline: analyze 0 errors / 11 infos; 9/9 tests pass.
 - After feature work: analyze **0 issues**; **35/35 tests pass**

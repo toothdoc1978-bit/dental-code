@@ -2,16 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../config.dart';
 import '../data/stands_data.dart';
-import '../models/river_status.dart';
 import '../providers/app_providers.dart';
 import '../services/member_store.dart';
-import '../services/scent_vector.dart';
 import '../utils/format.dart';
 import '../widgets/map_reference.dart';
 import '../widgets/stand_detail_sheet.dart';
 import '../widgets/stand_list.dart';
+import 'conditions_screen.dart';
 import 'hunt_log_screen.dart';
 
 /// Main screen: my-hunt banner + club map + live stand list.
@@ -73,6 +71,14 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Lookout Point'),
         actions: [
+          IconButton(
+            tooltip: 'Conditions',
+            icon: const Icon(Icons.cloud_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ConditionsScreen()),
+            ),
+          ),
           IconButton(
             tooltip: 'Hunt log',
             icon: const Icon(Icons.history),
@@ -309,59 +315,41 @@ class _MyHuntBannerState extends ConsumerState<_MyHuntBanner> {
   }
 }
 
-/// "X open · Y in use" summary strip + current wind/scent chip + river chip.
+/// "X open · Y in use" summary strip + a Conditions button. Weather and river
+/// details live on the Conditions screen (member feedback: keep home clean).
 class _StatusBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final total = ref.watch(standsProvider).length;
     final inUse = ref.watch(activeHuntsByCodeProvider).length;
-    final forecast = ref.watch(forecastProvider).valueOrNull;
-    final river = ref.watch(riverStatusProvider).valueOrNull;
-
-    String? windLabel;
-    if (forecast != null && forecast.hours.isNotEmpty) {
-      // The hour containing "now" — hours.first can be up to 2h stale.
-      final h = forecast.hours[forecast.indexForNow()];
-      final v = calculateScentVector(h, drainageHeading: kDrainageHeading);
-      windLabel =
-          'Wind ${cardinal(h.windDirDeg)} ${h.windMph.round()} · scent ${cardinal(v.angle)}';
-    }
-
-    final riverLabel = river == null ? null : _riverLabel(river);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
       child: Wrap(
         spacing: 8,
         runSpacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           _chip('${total - inUse} open', Colors.green.shade100,
               Colors.green.shade900),
           _chip('$inUse in use', Colors.grey.shade300, Colors.grey.shade800),
-          if (windLabel != null)
-            _chip(windLabel, Colors.blue.shade50, Colors.blue.shade900),
-          if (riverLabel != null)
-            _chip(riverLabel, Colors.cyan.shade50, Colors.cyan.shade900),
+          ActionChip(
+            avatar: Icon(Icons.cloud_outlined,
+                size: 16, color: Colors.blue.shade900),
+            label: Text('Conditions',
+                style: TextStyle(
+                    color: Colors.blue.shade900,
+                    fontWeight: FontWeight.w600)),
+            backgroundColor: Colors.blue.shade50,
+            side: BorderSide.none,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ConditionsScreen()),
+            ),
+          ),
         ],
       ),
     );
-  }
-
-  /// "River: Vburg 21.3′ ↗ · Gville 18.9′ →" — only gauges with data.
-  String? _riverLabel(RiverStatus r) {
-    String arrow(RiverTrend t) => switch (t) {
-          RiverTrend.rising => ' ↗',
-          RiverTrend.falling => ' ↘',
-          RiverTrend.steady => ' →',
-          RiverTrend.unknown => '',
-        };
-    final parts = <String>[
-      if (r.vicksburg.observedFt != null)
-        'Vburg ${r.vicksburg.observedFt!.toStringAsFixed(1)}′${arrow(r.vicksburg.trend)}',
-      if (r.greenville.observedFt != null)
-        'Gville ${r.greenville.observedFt!.toStringAsFixed(1)}′${arrow(r.greenville.trend)}',
-    ];
-    return parts.isEmpty ? null : 'River: ${parts.join(' · ')}';
   }
 
   Widget _chip(String text, Color bg, Color fg) {
