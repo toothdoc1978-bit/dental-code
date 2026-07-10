@@ -23,7 +23,9 @@ class _HuntLogScreenState extends ConsumerState<HuntLogScreen> {
   @override
   Widget build(BuildContext context) {
     final huntsAsync = ref.watch(huntLogProvider);
-    final uid = ref.watch(authUidProvider);
+    // "Mine" is keyed to the chosen member, not the device's anonymous auth
+    // id, so a hunt started on one device still shows here on another.
+    final memberId = ref.watch(currentMemberProvider)?.id;
 
     return Scaffold(
       appBar: AppBar(
@@ -44,7 +46,7 @@ class _HuntLogScreenState extends ConsumerState<HuntLogScreen> {
         error: (e, _) => Center(child: Text('Could not load hunts:\n$e')),
         data: (all) {
           final hunts = _mineOnly
-              ? all.where((h) => h.userId == uid).toList()
+              ? all.where((h) => h.memberId == memberId).toList()
               : all;
           if (hunts.isEmpty) {
             return Center(
@@ -173,11 +175,16 @@ class _HuntTile extends StatelessWidget {
       if (hunt.fawnSeen != null) '${hunt.fawnSeen} fawn${hunt.fawnSeen == 1 ? '' : 's'}',
     ].join(' · ');
 
+    final riverAge = (hunt.riverObservedAt != null && ci != null)
+        ? ci.difference(hunt.riverObservedAt!)
+        : null;
     final river = <String>[
       if (hunt.riverVicksburgFt != null)
         'Vburg ${hunt.riverVicksburgFt!.toStringAsFixed(1)} ft',
       if (hunt.riverGreenvilleFt != null)
         'Gville ${hunt.riverGreenvilleFt!.toStringAsFixed(1)} ft',
+      if (riverAge != null && riverAge > Duration.zero)
+        '(${fmtDuration(riverAge)} old)',
     ].join(' · ');
 
     return ListTile(
@@ -191,11 +198,13 @@ class _HuntTile extends StatelessWidget {
       ),
       title: Row(
         children: [
-          Icon(huntTypeIcon(hunt.huntType),
+          Icon(activityIcon(hunt.activity),
               size: 15, color: Colors.grey.shade700),
           const SizedBox(width: 5),
           Expanded(
-            child: Text('${hunt.memberName} · ${hunt.huntType}',
+            child: Text(
+                '${hunt.memberName} · ${huntLabel(hunt.activity, hunt.method)}'
+                '${hunt.allDay ? ' · Yellow Tag' : ''}',
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w600)),
           ),

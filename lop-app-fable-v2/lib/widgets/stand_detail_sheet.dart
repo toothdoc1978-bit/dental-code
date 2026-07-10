@@ -4,10 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/hunt_types.dart';
+import '../data/members.dart';
 import '../models/hunt.dart';
+import '../models/member.dart';
 import '../models/stand.dart';
 import '../providers/app_providers.dart';
 import '../services/firestore_service.dart';
+import '../utils/format.dart';
 
 /// Bottom sheet shown when a stand is tapped. Open → pick a hunt type and Check
 /// In (records exact time + river levels). Mine → Check Out (deer-hunting
@@ -21,12 +24,16 @@ class StandDetailSheet extends ConsumerStatefulWidget {
 }
 
 class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
-  String? _selectedType;
+  String? _selectedActivity;
+  String? _selectedMethod;
   bool _busy = false;
+  bool _allDay = false;
+  Member? _responsibleAdult;
 
   final _doe = TextEditingController();
   final _buck = TextEditingController();
   final _fawn = TextEditingController();
+  final _guestNames = TextEditingController();
 
   Stand get stand => widget.stand;
 
@@ -35,6 +42,7 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
     _doe.dispose();
     _buck.dispose();
     _fawn.dispose();
+    _guestNames.dispose();
     super.dispose();
   }
 
@@ -44,26 +52,32 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
     final hunt = ref.watch(activeHuntsByCodeProvider)[stand.code];
     final myHunt = ref.watch(myActiveHuntProvider).valueOrNull;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        16,
-        20,
-        16 + MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _header(),
-          const SizedBox(height: 16),
-          if (hunt == null)
-            _openBody(myHunt)
-          else if (hunt.memberId == memberId)
-            _mineBody(hunt)
-          else
-            _takenBody(hunt),
-        ],
+    // SingleChildScrollView is required, not decorative: the open-check-in
+    // body now stacks hunt-type chips + an all-day switch + a guest expander,
+    // which can overflow a short phone screen once the keyboard is up for the
+    // guest-name field.
+    return SingleChildScrollView(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          20,
+          16,
+          20,
+          16 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _header(),
+            const SizedBox(height: 16),
+            if (hunt == null)
+              _openBody(myHunt)
+            else if (hunt.memberId == memberId)
+              _mineBody(hunt)
+            else
+              _takenBody(hunt),
+          ],
+        ),
       ),
     );
   }
@@ -113,7 +127,30 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
     }
 
     final highWater = ref.watch(highWaterProvider);
-    final types = allowedHuntTypes(bowOnly: stand.bowOnly, highWater: highWater);
+    final activities =
+        allowedActivities(bowOnly: stand.bowOnly, highWater: highWater);
+    // If the stand/high-water combo changed under a stale selection (e.g.
+    // high water just kicked in), drop choices that are no longer legal.
+    if (_selectedActivity != null && !activities.contains(_selectedActivity)) {
+      _selectedActivity = null;
+      _selectedMethod = null;
+    }
+    final methods = _selectedActivity == null
+        ? const <String>[]
+        : allowedMethods(
+            activity: _selectedActivity!,
+            bowOnly: stand.bowOnly,
+            highWater: highWater,
+          );
+    if (_selectedMethod != null && !methods.contains(_selectedMethod)) {
+      _selectedMethod = null;
+    }
+    // Skip the method step entirely when there's only one legal choice
+    // (Scouting/Camera Service → always just 'None').
+    if (methods.length == 1 && _selectedMethod == null) {
+      _selectedMethod = methods.first;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -132,15 +169,47 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
           spacing: 8,
           runSpacing: 8,
           children: [
-            for (final t in types)
+            for (final a in activities)
               ChoiceChip(
-                avatar: Icon(huntTypeIcon(t), size: 18),
-                label: Text(t),
-                selected: _selectedType == t,
-                onSelected: (_) => setState(() => _selectedType = t),
+                avatar: Icon(activityIcon(a), size: 18),
+                label: Text(a),
+                selected: _selectedActivity == a,
+                onSelected: (_) => setState(() {
+                  _selectedActivity = a;
+                  _selectedMethod = null;
+                }),
               ),
           ],
         ),
+        if (_selectedActivity != null && methods.length > 1) ...[
+          const SizedBox(height: 14),
+          const Text('How?', style: TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final m in methods)
+                ChoiceChip(
+                  label: Text(m),
+                  selected: _selectedMethod == m,
+                  onSelected: (_) => setState(() => _selectedMethod = m),
+                ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 12),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          title: const Text('Hunting all day? (Yellow Tag)'),
+          subtitle: const Text(
+              "Lets others avoid driving past you unnecessarily.",
+              style: TextStyle(fontSize: 12)),
+          value: _allDay,
+          onChanged: (v) => setState(() => _allDay = v),
+        ),
+        _guestExpander(),
         const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,
@@ -152,17 +221,68 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
             icon: const Icon(Icons.login),
             label: Text(_busy ? 'Checking in…' : 'Check In',
                 style: const TextStyle(fontSize: 17)),
-            onPressed: (_selectedType == null || _busy) ? null : _checkIn,
+            onPressed: (_selectedActivity == null ||
+                    _selectedMethod == null ||
+                    _busy)
+                ? null
+                : _checkIn,
           ),
         ),
       ],
     );
   }
 
+  /// Collapsed by default (most check-ins are solo). Optional guest name(s) +
+  /// a responsible-adult picker, purely for whereabouts/safety visibility —
+  /// NOT a hunter-safety certification (no age field exists to enforce
+  /// "adult"). Draws from the full roster, not just active hunters, since the
+  /// picker is most useful at the very first check-in of the day when nobody
+  /// else is active yet.
+  Widget _guestExpander() {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        title: const Text('Add a guest', style: TextStyle(fontSize: 14)),
+        childrenPadding: const EdgeInsets.only(bottom: 8),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _guestNames,
+            decoration: const InputDecoration(
+              labelText: 'Guest name(s)',
+              hintText: 'e.g. John Smith, Sam Smith',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<Member?>(
+            initialValue: _responsibleAdult,
+            decoration: const InputDecoration(
+              labelText: 'Responsible adult (optional)',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem<Member?>(value: null, child: Text('—')),
+              for (final m in kMembers)
+                DropdownMenuItem<Member?>(value: m, child: Text(m.name)),
+            ],
+            onChanged: (m) => setState(() => _responsibleAdult = m),
+          ),
+        ],
+      ),
+    );
+  }
+
   // --- Mine: show + check out (deer count if applicable) ---------------------
 
   Widget _mineBody(Hunt hunt) {
-    final needsDeer = requiresDeerCount(hunt.huntType);
+    final needsDeer = requiresDeerCount(hunt.activity);
+    final riverAge = (hunt.riverObservedAt != null && hunt.checkInTime != null)
+        ? hunt.checkInTime!.difference(hunt.riverObservedAt!)
+        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -171,10 +291,11 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              'MS River @ check-in: '
+              'MS River: '
               '${hunt.riverVicksburgFt != null ? 'Vicksburg ${hunt.riverVicksburgFt!.toStringAsFixed(1)} ft' : ''}'
               '${hunt.riverVicksburgFt != null && hunt.riverGreenvilleFt != null ? ' · ' : ''}'
-              '${hunt.riverGreenvilleFt != null ? 'Greenville ${hunt.riverGreenvilleFt!.toStringAsFixed(1)} ft' : ''}',
+              '${hunt.riverGreenvilleFt != null ? 'Greenville ${hunt.riverGreenvilleFt!.toStringAsFixed(1)} ft' : ''}'
+              '${riverAge != null && riverAge > Duration.zero ? ' (reading was ${fmtDuration(riverAge)} old at check-in)' : ''}',
               style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
             ),
           ),
@@ -273,6 +394,11 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
 
   Widget _huntLine(Hunt hunt, {required String prefix, bool mine = false}) {
     final since = _fmtTime(hunt.checkInTime);
+    final extras = <String>[
+      if (hunt.guestNames.isNotEmpty) 'with ${hunt.guestNames.join(', ')}',
+      if (hunt.responsibleAdultName != null)
+        'responsible adult: ${hunt.responsibleAdultName}',
+    ];
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -281,19 +407,44 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
       ),
       child: Row(
         children: [
-          Icon(huntTypeIcon(hunt.huntType),
+          Icon(activityIcon(hunt.activity),
               color: Colors.grey.shade800, size: 28),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('$prefix · ${hunt.huntType}',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                          '$prefix · ${huntLabel(hunt.activity, hunt.method)}',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
+                    if (hunt.allDay)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade200,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text('ALL DAY',
+                            style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber.shade900)),
+                      ),
+                  ],
+                ),
                 if (since.isNotEmpty)
                   Text('Checked in at $since',
                       style: TextStyle(color: Colors.grey.shade700)),
+                for (final e in extras)
+                  Text(e,
+                      style: TextStyle(
+                          color: Colors.grey.shade700, fontSize: 12)),
               ],
             ),
           ),
@@ -330,15 +481,27 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
-      // Record the Mississippi River stage at check-in (null if offline).
-      final river = await ref.read(riverServiceProvider).currentLevels();
+      // Never fetch river data live at check-in — read whatever's already
+      // cached (kept warm by HomeScreen). Zero network wait, and more
+      // reliable than a live call: a momentary NOAA outage can't null it out.
+      final river = ref.read(riverStatusProvider).valueOrNull;
+      final guestNames = _guestNames.text
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
       await ref.read(firestoreServiceProvider).checkIn(
             stand: stand,
-            huntType: _selectedType!,
+            activity: _selectedActivity!,
+            method: _selectedMethod!,
             member: member,
             userId: uid,
-            riverVicksburgFt: river.vicksburgFt,
-            riverGreenvilleFt: river.greenvilleFt,
+            riverVicksburgFt: river?.vicksburg.observedFt,
+            riverGreenvilleFt: river?.greenville.observedFt,
+            riverObservedAt: river?.fetchedAt,
+            allDay: _allDay,
+            guestNames: guestNames,
+            responsibleAdult: _responsibleAdult,
           );
       HapticFeedback.mediumImpact();
       navigator.pop();

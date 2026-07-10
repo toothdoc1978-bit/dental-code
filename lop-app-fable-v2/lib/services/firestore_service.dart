@@ -25,9 +25,10 @@ class AlreadyCheckedInException implements Exception {
 
 /// All Firestore reads/writes live here.
 ///
-/// `hunts` — one doc per check-in: standCode/huntType/member* strings, userId,
-/// active, checkInTime/checkOutTime, doeSeen/buckSeen/fawnSeen (deer hunts),
-/// riverVicksburgFt/riverGreenvilleFt (river stage at check-in).
+/// `hunts` — one doc per check-in: standCode/activity/method/member* strings,
+/// userId, active, checkInTime/checkOutTime, doeSeen/buckSeen/fawnSeen (deer
+/// hunts), riverVicksburgFt/riverGreenvilleFt/riverObservedAt (cached river
+/// reading at check-in), allDay, guestNames, responsibleAdult*.
 /// `standPositions` — doc id == stand code, x/y fractions of the map image.
 class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
@@ -40,15 +41,22 @@ class FirestoreService {
   CollectionReference<Map<String, dynamic>> get _positions =>
       _db.collection('standPositions');
 
-  /// Checks [member] into [stand] for [huntType], recording the exact time and
-  /// the Mississippi River stage (ft) at Vicksburg & Greenville (null if offline).
+  /// Checks [member] into [stand] for [activity]/[method], recording the
+  /// exact time plus whatever Mississippi River reading was already cached
+  /// client-side (never fetched live here — check-in must never block on
+  /// network).
   Future<String> checkIn({
     required Stand stand,
-    required String huntType,
+    required String activity,
+    required String method,
     required Member member,
     required String userId,
     double? riverVicksburgFt,
     double? riverGreenvilleFt,
+    DateTime? riverObservedAt,
+    bool allDay = false,
+    List<String> guestNames = const [],
+    Member? responsibleAdult,
   }) async {
     // One hunt per member, no matter which device started it.
     final mine = await _hunts
@@ -71,7 +79,8 @@ class FirestoreService {
 
     final ref = await _hunts.add({
       'standCode': stand.code,
-      'huntType': huntType,
+      'activity': activity,
+      'method': method,
       'memberId': member.id,
       'memberName': member.name,
       'memberPhone': member.phone,
@@ -84,6 +93,12 @@ class FirestoreService {
       'fawnSeen': null,
       'riverVicksburgFt': riverVicksburgFt,
       'riverGreenvilleFt': riverGreenvilleFt,
+      'riverObservedAt':
+          riverObservedAt == null ? null : Timestamp.fromDate(riverObservedAt),
+      'allDay': allDay,
+      'guestNames': guestNames,
+      'responsibleAdultMemberId': responsibleAdult?.id,
+      'responsibleAdultName': responsibleAdult?.name,
       'createdAt': FieldValue.serverTimestamp(),
     });
     return ref.id;

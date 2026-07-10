@@ -23,12 +23,14 @@ const _me = Member(
 Hunt _hunt({
   String id = 'h1',
   String standCode = '28',
-  String huntType = 'Rifle',
+  String activity = 'Deer',
+  String method = 'Rifle',
   String userId = 'uid-me',
   String memberId = 'm01',
   String memberName = 'David Ditch',
   bool active = true,
   bool autoClosed = false,
+  bool allDay = false,
   DateTime? checkIn,
   DateTime? checkOut,
   int? doe,
@@ -37,12 +39,14 @@ Hunt _hunt({
     Hunt(
       id: id,
       standCode: standCode,
-      huntType: huntType,
+      activity: activity,
+      method: method,
       memberId: memberId,
       memberName: memberName,
       memberPhone: '555-111-2222',
       userId: userId,
       autoClosed: autoClosed,
+      allDay: allDay,
       active: active,
       checkInTime: checkIn ?? DateTime.now().subtract(const Duration(hours: 2)),
       checkOutTime: checkOut,
@@ -50,6 +54,7 @@ Hunt _hunt({
       buckSeen: buck,
       riverVicksburgFt: 21.3,
       riverGreenvilleFt: 18.9,
+      riverObservedAt: checkIn?.subtract(const Duration(minutes: 20)),
     );
 
 Forecast _forecast() {
@@ -241,7 +246,7 @@ void main() {
 
     expect(find.text('Club season'), findsOneWidget);
     expect(find.text('hunts'), findsOneWidget);
-    expect(find.textContaining('David Ditch · Rifle'), findsOneWidget);
+    expect(find.textContaining('David Ditch · Deer · Rifle'), findsOneWidget);
     expect(find.textContaining('5:40 AM – 9:10 AM'), findsOneWidget);
     expect(find.textContaining('1 buck · 2 does'), findsOneWidget);
     expect(find.textContaining('Vburg 21.3 ft'), findsOneWidget);
@@ -308,6 +313,75 @@ void main() {
       const Offset(0, -400),
     );
     expect(find.textContaining('Judging a mature buck'), findsOneWidget);
+  });
+
+  testWidgets('all-day hunt shows an ALL DAY badge on its list row',
+      (tester) async {
+    final allDay = _hunt(standCode: '1', allDay: true, memberId: 'someone-else');
+    await tester.pumpWidget(_app(overrides: _baseOverrides(active: [allDay])));
+    await tester.pump();
+
+    expect(find.text('ALL DAY'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets(
+      'check-in shows Activity chips, then Method chips, then enables Check In',
+      (tester) async {
+    await tester.pumpWidget(_app(overrides: _baseOverrides()));
+    await tester.pump();
+
+    // Tap an open stand row to open the check-in sheet (Stand 2, no hunt).
+    await tester.tap(find.text('Stand 2'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('What are you hunting?'), findsOneWidget);
+    expect(find.text('Deer'), findsOneWidget);
+    // Method step not shown until an activity is picked.
+    expect(find.text('How?'), findsNothing);
+
+    await tester.tap(find.text('Deer'));
+    await tester.pump();
+
+    expect(find.text('How?'), findsOneWidget);
+    expect(find.text('Bow'), findsOneWidget);
+    expect(find.text('Rifle'), findsOneWidget);
+
+    final checkInButton =
+        find.widgetWithText(FilledButton, 'Check In').first;
+    expect(tester.widget<FilledButton>(checkInButton).onPressed, isNull);
+
+    await tester.tap(find.text('Bow'));
+    await tester.pump();
+
+    expect(tester.widget<FilledButton>(checkInButton).onPressed, isNotNull);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('bow-only stand only offers archery activities/methods',
+      (tester) async {
+    await tester.pumpWidget(_app(overrides: _baseOverrides()));
+    await tester.pump();
+
+    // Stand 1B is bow-only (stands_data.dart) but sits at list index 91 —
+    // filter down to it instead of relying on ListView's lazy building.
+    await tester.enterText(find.byType(TextField).first, '1B');
+    await tester.pump();
+    await tester.tap(find.text('Stand 1B'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Duck'), findsNothing); // shotgun-only, hidden
+    expect(find.text('Deer'), findsOneWidget);
+
+    await tester.tap(find.text('Deer'));
+    await tester.pump();
+
+    expect(find.text('Bow'), findsOneWidget);
+    expect(find.text('Rifle'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets('history button navigates to the hunt log', (tester) async {

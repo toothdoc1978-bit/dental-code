@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/hunt_types.dart';
 import '../models/stand.dart';
 import '../providers/app_providers.dart';
 import '../utils/format.dart';
@@ -81,10 +82,36 @@ class StandList extends ConsumerWidget {
             ],
           ),
           subtitle: hunt != null
-              ? Text(
-                  '${mine ? 'You' : hunt.memberFirstName} · ${hunt.huntType}'
-                  '${sinceLabel ?? ''}',
-                  style: TextStyle(color: Colors.grey.shade700),
+              ? Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        '${mine ? 'You' : hunt.memberFirstName} · '
+                        '${huntLabel(hunt.activity, hunt.method)}'
+                        '${hunt.guestNames.isNotEmpty ? ' +guest' : ''}'
+                        '${sinceLabel ?? ''}',
+                        style: TextStyle(color: Colors.grey.shade700),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (hunt.allDay)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade200,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text('ALL DAY',
+                              style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.amber.shade900)),
+                        ),
+                      ),
+                  ],
                 )
               : Text(
                   stand.bowOnly ? 'Open · bow-only' : 'Open',

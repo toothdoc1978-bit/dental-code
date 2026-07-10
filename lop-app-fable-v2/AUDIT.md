@@ -161,7 +161,74 @@ inert once published.
 - **Admin "End all active hunts now"** in the Conditions admin card (confirm
   dialog) — clears test data or a stuck board in one tap.
 
+## Follow-up 7: field-testing feedback (v2.4)
+Chad tested v2.3 in the field and reported five things (see conversation for
+his full write-up and my point-by-point response). Researched with three
+parallel Explore agents before designing, then a Plan-agent design review
+that caught a real bug in the initial fix for #2 before it shipped.
+
+- **Hunt Log ownership bug (confirmed, fixed)**: `hunt_log_screen.dart` was
+  the one screen still checking `hunt.userId == uid` (device id) instead of
+  `hunt.memberId == member.id` (person id) — missed in the v2.3 migration.
+  A hunt started on one device wasn't showing as "mine" in Hunt Log on
+  another. One-line fix.
+- **Non-blocking check-in**: check-in used to `await` two live 4s-timeout
+  HTTPS calls to NOAA before writing anything, and on a timeout recorded the
+  hunt with NO river data even if a good cached reading existed. Now reads
+  the already-cached `riverStatus/current` value synchronously — zero network
+  calls, and more reliable (a momentary NOAA outage can't null out a fresh
+  cache read). **Bug caught by design review before shipping**: Riverpod
+  `StreamProvider`s only start their subscription on first read — if
+  check-in were the first thing to ever read `riverStatusProvider` in a
+  session, it would've gotten `null` (worse than the old blocking call).
+  Fixed by eagerly `ref.watch`-ing it in `HomeScreen.build()` so it's warm
+  before anyone can reach a stand. `Hunt` gained `riverObservedAt` (the
+  cached reading's timestamp) so the UI can show "reading was 47m old at
+  check-in" instead of implying a live-exact read; kept both
+  `riverVicksburgFt`/`riverGreenvilleFt` as separate fields per the original
+  dual-gauge spec, rather than collapsing to one field as first proposed.
+  The existing 15-min auto-checkout timer now also re-nudges the
+  weather/river caches (each a no-op unless its own TTL expired).
+- **Activity + Method split**: `huntType` (one flat string mixing species and
+  weapon) is now two fields — `activity` (Deer/Duck/Squirrel/Hog/Turkey/
+  Scouting/Camera Service/Other) and `method` (Rifle/Suppressed Rifle/
+  Primitive Firearm/Shotgun/Bow/Crossbow/None) — see `data/hunt_types.dart`
+  for the full legality matrix. This finally implements the club's own
+  written squirrel exception (guns allowed on bow-only stands for squirrel
+  hunters) which the old flat list couldn't express, and scopes the
+  high-water archery restriction to Deer specifically rather than to
+  weapon-words in general. Check-in UI is a two-stage picker (Activity, then
+  only the legal Methods for that activity/stand/high-water combo); an
+  activity is never offered if it has zero legal methods on the current
+  stand (e.g. Duck is hidden on bow-only stands, shotgun-only). Firestore
+  rules validate both fields against fixed lists server-side (tighter than
+  the old `is string, size<=30`) and now also validate `memberId` presence
+  (a gap in the old rules). Clean cutover, no dual-write — `Hunt.fromDoc`
+  defaults to `'Other'/'None'` for any pre-migration doc so nothing crashes.
+  **Deployed the same session as the rules publish** — not pre-published —
+  because this migration removes a field older builds still write, and an
+  offline-queued check-in from a stale build syncing after the rules go out
+  would be permanently rejected.
+- **All-day / "Yellow Tag"**: `Hunt.allDay` (bool), a switch at check-in,
+  and an amber badge everywhere occupancy shows (list row, map pin border,
+  detail sheet, a home status-bar count). Uses the club's own term — the
+  rules text already says "Hunting all day (Yellow Tag)? Say so at the
+  morning draw." Deliberately informational only: no GPS/road data exists in
+  this app to enforce "don't drive past," just to make it easy to see.
+- **Guest/party visibility** (scoped to visibility-only per Chad's decision —
+  hunter-safety certification, firearm counts, and formal rules-
+  acknowledgement explicitly deferred): `Hunt.guestNames` (free text, no
+  accounts — guest harvests already count toward the sponsoring member per
+  club rules) and `Hunt.responsibleAdultMemberId`/`responsibleAdultName`
+  (picked from the full roster, not just active hunters, so it's available
+  at the very first check-in of the day). Both collapse behind an "Add a
+  guest" expander in the check-in sheet. No age field exists on `Member`, so
+  "responsible adult" is a label, not an enforced filter — stated as such.
+  Regular teenage/family hunters get individual roster entries (same pattern
+  as existing Son/Wife/Grandson/Proxy rows), not the guest-name path.
+
 ## Verification log
 - Baseline: analyze 0 errors / 11 infos; 9/9 tests pass.
 - After feature work: analyze **0 issues**; **35/35 tests pass**
   (units + widget smoke tests).
+- v2.4: analyze **0 issues**; **76/76 tests pass**.

@@ -19,16 +19,27 @@ service cloud.firestore {
     match /hunts/{huntId} {
       allow read: if request.auth != null;
 
+      // NOTE these two lists must stay in sync BY HAND with kActivities/
+      // kMethods in lib/data/hunt_types.dart — there's no shared codegen.
+      // Forgetting to update one after adding an activity means check-in
+      // fails silently (permission-denied) at the stand, not at build time.
       allow create: if request.auth != null
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.active == true
         && request.resource.data.standCode is string
         && request.resource.data.standCode.size() >= 1
         && request.resource.data.standCode.size() <= 4
-        && request.resource.data.huntType is string
-        && request.resource.data.huntType.size() <= 30
+        && request.resource.data.memberId is string
+        && request.resource.data.memberId.size() >= 1
+        && request.resource.data.memberId.size() <= 10
         && request.resource.data.memberName is string
         && request.resource.data.memberName.size() <= 60
+        && request.resource.data.activity in
+            ['Deer', 'Duck', 'Squirrel', 'Hog', 'Turkey', 'Scouting',
+             'Camera Service', 'Other']
+        && request.resource.data.method in
+            ['Rifle', 'Suppressed Rifle', 'Primitive Firearm', 'Shotgun',
+             'Bow', 'Crossbow', 'None']
         // Deer counts are only recorded at check-out.
         && request.resource.data.doeSeen == null
         && request.resource.data.buckSeen == null

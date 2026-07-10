@@ -11,13 +11,17 @@ and change log). The original app lives untouched in `lop-app/` on `main`.
 - **130 stands** — gold `1`–`90` (any method) and bow-only `1B`–`40B`.
 - **Stand list** — search by stand number **or hunter name**; filter All/Gold/Bow-only;
   each row has a map button that jumps straight to that stand on the aerial.
-- **Check-in** — pick a hunt type (Rifle / Suppressed Rifle / Muzzleloader / Bow /
-  Crossbow / Squirrel / Duck / Hog / Scouting / Other). Records the exact
-  date/time plus the **Mississippi River stage** at **Vicksburg (VCKM6)** and
-  **Greenville (GEEM6)** from NOAA's National Water Prediction Service (keyless).
-  Haptic confirmation on success.
-- **Check-out** — deer-hunting methods require entering **Does / Bucks / Fawns**
-  before finishing; non-deer methods check out immediately.
+- **Check-in** 🆕 — two-stage picker: pick an **Activity** (Deer / Duck /
+  Squirrel / Hog / Turkey / Scouting / Camera Service / Other), then only the
+  legally valid **Method** for that activity/stand/high-water combo (Rifle /
+  Suppressed Rifle / Primitive Firearm / Shotgun / Bow / Crossbow / None) —
+  see `data/hunt_types.dart`. Never blocks on network: reads the already-
+  cached Mississippi River stage instead of a live NOAA call. Optional
+  "Hunting all day? (Yellow Tag)" switch and an "Add a guest" expander
+  (guest name + responsible-adult picker, visibility only). Haptic
+  confirmation on success.
+- **Check-out** — Deer activity requires entering **Does / Bucks / Fawns**
+  before finishing; every other activity checks out immediately.
 - **Hunt Log** 🆕 — history button on the home screen: season totals (hunts, hours
   on stand, bucks/does/fawns) plus every completed hunt grouped by day, with
   times, duration, deer seen, and river stage. "Mine" filter for your own season.
@@ -48,7 +52,19 @@ and change log). The original app lives untouched in `lop-app/` on `main`.
   nearest reporting station). Opening the map while checked in auto-selects
   **your** stand so your cone appears immediately.
 - **My-hunt banner** — persistent bar with your stand/hunt/elapsed time (ticks
-  every minute) and one-tap Check Out.
+  every minute) and one-tap Check Out. Ownership is keyed to your chosen
+  member identity, not the device, so it (and "Mine" in the Hunt Log) follows
+  you across every device you've picked your name on.
+- **Yellow Tag / all-day** 🆕 — mark a check-in as an all-day sit; shows an
+  amber badge on the list row, map pin, and detail sheet, plus a home
+  status-bar count — purely informational (no GPS/road data to enforce it).
+- **8 PM auto-checkout** — every active hunt closes automatically at 8 PM
+  (hunts started after 8 PM survive to the next evening); a dismissible
+  notice tells you if it happened to you. Admin (Conditions screen) can also
+  clear the whole board on demand.
+- **LDWF high-water archery rule** — when Vicksburg reaches 43.0 ft, Deer
+  firearm methods disappear from check-in club-wide (archery only) until the
+  stage drops below 41.0 ft; admin override available.
 - **Wind chip** — current-hour wind + predicted scent direction in the status row.
 
 ## Tech
@@ -71,10 +87,12 @@ lib/
              map_reference · stand_map (pins + scent cone) · scent_cone_painter
   utils/     format.dart (clock/elapsed/duration/date/cardinal)
 assets/lop_map.jpg              the club aerial (from the Eagle Forestry PDF)
-test/      35 tests: stands · scent physics · formats · hunt types ·
-           forecast now-index · river parsing/trend · UI smoke tests
-firestore.rules                 tightened: owner-only checkout updates, immutable
-                                history, bounded pin coords, shape-checked caches
+test/      76 tests: stands · scent physics · formats · activity/method
+           legality · forecast now-index · river parsing/trend · auto-
+           checkout sweep timing · club status · UI smoke tests
+firestore.rules                 activity/method + memberId validated server-
+                                side; checkout is one-way active->false with
+                                a field whitelist; pins/caches shape-checked
 AUDIT.md                        the full review + change log for this build
 ```
 
@@ -90,7 +108,7 @@ machine/account-specific:
 4. `flutter pub get`
 5. `flutter run --release` on a device, or `flutter build apk --release` for Android
 
-`flutter test` runs all 35 tests; `flutter analyze` is clean (0 issues).
+`flutter test` runs all 76 tests; `flutter analyze` is clean (0 issues).
 
 ## Notes for whoever picks this up next
 - `lib/firebase_options.dart` is a **placeholder** so the repo compiles — run
@@ -100,5 +118,15 @@ machine/account-specific:
 - The check-in double-occupancy guard is query-then-write (not a transaction) on
   purpose: transactions require connectivity and would break offline check-in.
   Acceptable race for a 36-member club; see AUDIT.md.
+- The `hunts.activity`/`hunts.method` enum lists are hand-duplicated in
+  `lib/data/hunt_types.dart` (`kActivities`/`kMethods`) AND `firestore.rules`
+  — no shared codegen. Adding an activity/method means editing BOTH, or
+  check-in fails silently (permission-denied) at the stand.
+- When deploying a schema/rules change that removes/renames a field an older
+  build still writes (like the huntType → activity+method migration), publish
+  the new `firestore.rules` in the **same session** you push the app update to
+  active devices — not ahead of time. Offline-first means a stale build can
+  have a queued write that syncs after the rules change and gets permanently
+  rejected if the rules go out first.
 - iOS distribution beyond personal-device installs needs the Apple Developer
   Program (TestFlight); Android testers can use Firebase App Distribution (free).

@@ -128,6 +128,7 @@ class StandMap extends ConsumerWidget {
 
     final fontSize = (w * 0.014).clamp(7.0, 12.0);
     final fg = inUse ? Colors.red.shade700 : Colors.green.shade800;
+    final allDay = hunt?.allDay ?? false;
 
     void openSheet() => showModalBottomSheet(
           context: ctx,
@@ -170,7 +171,11 @@ class StandMap extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(6),
                 border: selected
                     ? Border.all(color: Colors.amber.shade800, width: 1.5)
-                    : null,
+                    // Yellow-tag stands get a visible amber ring even when
+                    // not selected, so it reads at a glance on the map.
+                    : (allDay
+                        ? Border.all(color: Colors.amber.shade700, width: 1.5)
+                        : null),
               ),
               child: Text(
                 code,

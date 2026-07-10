@@ -84,12 +84,16 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
     unawaited(WeatherService().ensureFreshForecast());
     unawaited(RiverService().ensureFreshStatus());
     // 8 PM auto-checkout: sweep now, then re-check every 15 minutes so a
-    // phone left open clears the board at the cutoff.
+    // phone left open clears the board at the cutoff. The same timer also
+    // re-nudges the weather/river caches (each a no-op unless its own TTL
+    // has expired) so a long-lived session doesn't serve an ever-staler
+    // cache to check-in, which now reads that cache directly instead of live.
     unawaited(FirestoreService().autoCheckoutSweep());
-    _sweepTimer = Timer.periodic(
-      const Duration(minutes: 15),
-      (_) => unawaited(FirestoreService().autoCheckoutSweep()),
-    );
+    _sweepTimer = Timer.periodic(const Duration(minutes: 15), (_) {
+      unawaited(FirestoreService().autoCheckoutSweep());
+      unawaited(WeatherService().ensureFreshForecast());
+      unawaited(RiverService().ensureFreshStatus());
+    });
   }
 
   @override

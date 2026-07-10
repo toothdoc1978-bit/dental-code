@@ -3,6 +3,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/hunt_types.dart';
 import '../data/stands_data.dart';
 import '../providers/app_providers.dart';
 import '../services/ack_store.dart';
@@ -43,6 +44,11 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final member = ref.watch(currentMemberProvider);
+    // Riverpod StreamProviders only start their Firestore subscription on
+    // first watch/read. Warm it here (value unused) so check-in — which
+    // reads this synchronously, never live — already has data by the time
+    // anyone can reach a stand from this screen.
+    ref.watch(riverStatusProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -267,7 +273,9 @@ class _MyHuntBannerState extends ConsumerState<_MyHuntBanner> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "You're on Stand ${hunt.standCode} · ${hunt.huntType}",
+                    "You're on Stand ${hunt.standCode} · "
+                    "${huntLabel(hunt.activity, hunt.method)}"
+                    "${hunt.allDay ? ' · Yellow Tag (all day)' : ''}",
                     style: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold),
                   ),
@@ -369,7 +377,9 @@ class _StatusBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final total = ref.watch(standsProvider).length;
-    final inUse = ref.watch(activeHuntsByCodeProvider).length;
+    final active = ref.watch(activeHuntsByCodeProvider);
+    final inUse = active.length;
+    final allDay = active.values.where((h) => h.allDay).length;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
@@ -381,6 +391,9 @@ class _StatusBar extends ConsumerWidget {
           _chip('${total - inUse} open', Colors.green.shade100,
               Colors.green.shade900),
           _chip('$inUse in use', Colors.grey.shade300, Colors.grey.shade800),
+          if (allDay > 0)
+            _chip('$allDay all day', Colors.amber.shade100,
+                Colors.amber.shade900),
           ActionChip(
             avatar: Icon(Icons.cloud_outlined,
                 size: 16, color: Colors.blue.shade900),
