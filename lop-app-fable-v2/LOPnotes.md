@@ -17,14 +17,19 @@
 ## Deploying a change (every time)
 ```bash
 cd ~/dental-code && git pull
-cp -R lop-app-fable-v2/lib lop-app-fable-v2/assets ~/lop-web/
+rsync -a --exclude 'firebase_options.dart' lop-app-fable-v2/lib/ ~/lop-web/lib/
+cp -R lop-app-fable-v2/assets ~/lop-web/
 cd ~/lop-web
-flutterfire configure --project=lop-hunting-club --platforms=web   # only if firebase_options.dart got overwritten
 flutter build web --release
 firebase deploy --only hosting
 ```
-Then hard-refresh (Cmd-Shift-R) or fully close/reopen the tab on any device
-testing it — the browser caches aggressively.
+⚠️ The `--exclude 'firebase_options.dart'` matters: the repo's copy of that
+file is a fake-key placeholder, and copying it over `~/lop-web`'s real one
+ships a build that can't reach Firebase at all — symptom is a totally blank
+screen on load (this happened with the v2.4 deploy). If it ever does get
+clobbered, `flutterfire configure --project=lop-hunting-club --platforms=web`
+restores it. After deploying, fully close/reopen the tab (or use a Private
+tab) on any device testing it — the browser caches aggressively.
 
 **Publish `firestore.rules` whenever it changed** (Firebase console →
 Firestore Database → Rules → paste → Publish). ⚠️ **Timing matters** for any
