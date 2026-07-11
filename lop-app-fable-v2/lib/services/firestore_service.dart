@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config.dart';
 import '../models/hunt.dart';
 import '../models/member.dart';
+import '../models/sos_alert.dart';
 import '../models/stand.dart';
 
 /// Thrown when a check-in is attempted on a stand someone else already holds.
@@ -184,6 +185,50 @@ class FirestoreService {
     } catch (_) {
       return 0;
     }
+  }
+
+  // --- SOS ---------------------------------------------------------------------
+
+  CollectionReference<Map<String, dynamic>> get _sos => _db.collection('sos');
+
+  /// Writes an SOS request. Just the Firestore write — GPS was already
+  /// captured (or not) by the caller; never blocks a call for help on network.
+  Future<String> sendSos({
+    required Member member,
+    required String type,
+    String note = '',
+    double? lat,
+    double? lng,
+    double? accuracyM,
+  }) async {
+    final ref = await _sos.add({
+      'memberId': member.id,
+      'memberName': member.name,
+      'memberPhone': member.phone,
+      'type': type,
+      'note': note,
+      'lat': lat,
+      'lng': lng,
+      'accuracyM': accuracyM,
+      'active': true,
+      'createdAt': FieldValue.serverTimestamp(),
+      'resolvedAt': null,
+    });
+    return ref.id;
+  }
+
+  /// Marks an SOS handled. Anyone may resolve — the sender may be unable to.
+  Future<void> resolveSos(String id) {
+    return _sos.doc(id).update({
+      'active': false,
+      'resolvedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<List<SosAlert>> streamActiveSos() {
+    return _sos.where('active', isEqualTo: true).snapshots().map(
+          (snap) => snap.docs.map(SosAlert.fromDoc).toList(),
+        );
   }
 
   // --- Stand pin positions (shared) ------------------------------------------

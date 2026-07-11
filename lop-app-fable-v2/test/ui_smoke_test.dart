@@ -11,11 +11,13 @@ import 'package:lop_app/models/forecast.dart';
 import 'package:lop_app/models/hunt.dart';
 import 'package:lop_app/models/member.dart';
 import 'package:lop_app/models/river_status.dart';
+import 'package:lop_app/models/sos_alert.dart';
 import 'package:lop_app/providers/app_providers.dart';
 import 'package:lop_app/screens/conditions_screen.dart';
 import 'package:lop_app/screens/home_screen.dart';
 import 'package:lop_app/screens/hunt_log_screen.dart';
 import 'package:lop_app/screens/rules_screen.dart';
+import 'package:lop_app/screens/sos_screen.dart';
 
 const _me = Member(
     id: 'm99', name: 'Test Hunter', phone: '555-000-0000', role: 'Member', shares: '1');
@@ -84,12 +86,14 @@ List<Override> _baseOverrides({
   List<Hunt> active = const [],
   List<Hunt>? log,
   ClubStatus? club,
+  List<SosAlert> sos = const [],
   Member member = _me,
 }) =>
     [
       authUidProvider.overrideWith((ref) => 'uid-me'),
       currentMemberProvider.overrideWith((ref) => member),
       clubStatusProvider.overrideWith((ref) => Stream.value(club)),
+      activeSosProvider.overrideWith((ref) => Stream.value(sos)),
       activeHuntsProvider.overrideWith((ref) => Stream.value(active)),
       myActiveHuntProvider.overrideWith((ref) => Stream.value(myHunt)),
       standPositionsProvider.overrideWith(
@@ -380,6 +384,83 @@ void main() {
 
     expect(find.text('Bow'), findsOneWidget);
     expect(find.text('Rifle'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('active SOS shows a red banner with map/call actions',
+      (tester) async {
+    final sos = SosAlert(
+      id: 's1',
+      memberId: 'm01',
+      memberName: 'David Ditch',
+      memberPhone: '555-111-2222',
+      type: 'Stuck in the mud',
+      note: 'South Rd near 38',
+      lat: 32.81,
+      lng: -91.12,
+      createdAt: DateTime.now().subtract(const Duration(minutes: 22)),
+    );
+    await tester.pumpWidget(_app(overrides: _baseOverrides(sos: [sos])));
+    await tester.pump();
+
+    expect(find.textContaining('David needs help — Stuck in the mud'),
+        findsOneWidget);
+    expect(find.text('South Rd near 38'), findsOneWidget);
+    expect(find.byTooltip('Open location in Maps'), findsOneWidget);
+    expect(find.byTooltip('Call David'), findsOneWidget);
+    // Not my SOS and I'm not admin — no resolve button.
+    expect(find.byTooltip('Mark resolved'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('sender sees the Resolve button on their own SOS',
+      (tester) async {
+    final sos = SosAlert(
+      id: 's2',
+      memberId: 'm99', // == _me
+      memberName: _me.name,
+      memberPhone: _me.phone,
+      type: 'Injured',
+      createdAt: DateTime.now(),
+    );
+    await tester.pumpWidget(_app(overrides: _baseOverrides(sos: [sos])));
+    await tester.pump();
+
+    expect(find.byTooltip('Mark resolved'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('SOS screen leads with 911 and disables Send until a type is set',
+      (tester) async {
+    await tester.pumpWidget(
+        _app(overrides: _baseOverrides(), home: const SosScreen()));
+    await tester.pump();
+
+    expect(find.text('Call 911'), findsOneWidget);
+    expect(find.textContaining('call 911 FIRST'), findsOneWidget);
+
+    final send = find.widgetWithText(FilledButton, 'Send SOS');
+    expect(tester.widget<FilledButton>(send).onPressed, isNull);
+
+    await tester.tap(find.text('Stuck in the mud'));
+    await tester.pump();
+    expect(tester.widget<FilledButton>(send).onPressed, isNotNull);
+
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('SOS app-bar button opens the SOS screen', (tester) async {
+    await tester.pumpWidget(_app(overrides: _baseOverrides()));
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('SOS — request help'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SOS — request help'), findsOneWidget);
+    expect(find.text('Call 911'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
   });

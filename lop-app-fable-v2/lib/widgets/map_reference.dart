@@ -6,6 +6,7 @@ import '../data/stands_data.dart';
 import '../providers/app_providers.dart';
 import '../services/scent_vector.dart';
 import 'high_water_banner.dart';
+import 'sos_banner.dart';
 import 'stand_detail_sheet.dart';
 import 'stand_map.dart';
 
@@ -29,6 +30,7 @@ class MapFullScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Club Map')),
       body: Column(
         children: [
+          const SosBanner(),
           const HighWaterBanner(),
           Expanded(
             child: Stack(

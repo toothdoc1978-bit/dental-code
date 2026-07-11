@@ -90,6 +90,41 @@ service cloud.firestore {
         && request.resource.data.fetchedAt is timestamp;
     }
 
+    // SOS requests. Create with a sane shape; anyone signed-in may resolve
+    // (the sender may be hurt or out of data signal — a helper closes it).
+    // NOTE the type list must stay in sync BY HAND with kSosTypes in
+    // lib/models/sos_alert.dart.
+    match /sos/{sosId} {
+      allow read: if request.auth != null;
+
+      allow create: if request.auth != null
+        && request.resource.data.active == true
+        && request.resource.data.memberId is string
+        && request.resource.data.memberId.size() >= 1
+        && request.resource.data.memberName is string
+        && request.resource.data.memberName.size() <= 60
+        && request.resource.data.type in
+            ['Stuck in the mud', 'Injured', 'Vehicle trouble', 'Other']
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 300
+        && (request.resource.data.lat == null
+            || (request.resource.data.lat is number
+                && request.resource.data.lat >= -90
+                && request.resource.data.lat <= 90))
+        && (request.resource.data.lng == null
+            || (request.resource.data.lng is number
+                && request.resource.data.lng >= -180
+                && request.resource.data.lng <= 180));
+
+      allow update: if request.auth != null
+        && resource.data.active == true
+        && request.resource.data.active == false
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['active', 'resolvedAt']);
+
+      allow delete: if false;
+    }
+
     // Club-wide state: the LDWF high-water archery rule (clubStatus/current).
     // Writable by any signed-in device: the auto gauge logic runs client-side,
     // and admin gating is app-level (trusted club on anonymous auth).

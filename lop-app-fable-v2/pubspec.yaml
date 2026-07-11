@@ -24,6 +24,9 @@ dependencies:
   shared_preferences: ^2.3.2
   url_launcher: ^6.3.0
 
+  # SOS location (works on web too — browser permission prompt over HTTPS)
+  geolocator: ^13.0.1
+
   # Weather (Open-Meteo, keyless)
   http: ^1.2.0
 

@@ -68,6 +68,16 @@ permanently rejected (not retried).
 - **Yellow Tag / all-day, guests, and responsible-adult** are all just extra
   fields on the `Hunt` doc (`allDay`, `guestNames`, `responsibleAdultMemberId`/
   `Name`) — visibility-only, not enforcement or compliance records.
+- **SOS** (`sos` collection, `kSosTypes` in `models/sos_alert.dart` must stay
+  hand-synced with the rules enum): in-app red banner to every open app +
+  prefilled group text to Board members (`role == 'Board'` in the roster).
+  Explicitly NOT a 911 replacement — the screen leads with Call 911. GPS via
+  `geolocator` (works on web; the future native iOS build will need
+  NSLocationWhenInUseUsageDescription in Info.plist). The v2.5 rules change
+  is additive-only — safe to publish before or after the app deploy.
+- **Web-first through the first season** (decided v2.5): instant deploys
+  while iterating weekly; native iOS/Android later from the same codebase —
+  the main thing it adds is push notifications (SOS + 8 PM reminders).
 
 ## Known gotchas / lessons (carried forward + new)
 1. **Dart null-promotion**: test `if (x != null)` directly; never gate on a

@@ -11,11 +11,13 @@ import '../services/member_store.dart';
 import '../utils/format.dart';
 import '../widgets/high_water_banner.dart';
 import '../widgets/map_reference.dart';
+import '../widgets/sos_banner.dart';
 import '../widgets/stand_detail_sheet.dart';
 import '../widgets/stand_list.dart';
 import 'conditions_screen.dart';
 import 'hunt_log_screen.dart';
 import 'rules_screen.dart';
+import 'sos_screen.dart';
 
 /// Main screen: my-hunt banner + club map + live stand list.
 ///
@@ -45,15 +47,25 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final member = ref.watch(currentMemberProvider);
     // Riverpod StreamProviders only start their Firestore subscription on
-    // first watch/read. Warm it here (value unused) so check-in — which
-    // reads this synchronously, never live — already has data by the time
-    // anyone can reach a stand from this screen.
+    // first watch/read. Warm these here (values unused) so check-in — which
+    // reads the river cache synchronously, never live — already has data by
+    // the time anyone can reach a stand, and SOS alerts surface without
+    // visiting any particular screen.
     ref.watch(riverStatusProvider);
+    ref.watch(activeSosProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lookout Point'),
         actions: [
+          IconButton(
+            tooltip: 'SOS — request help',
+            icon: Icon(Icons.sos, color: Colors.red.shade700),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SosScreen()),
+            ),
+          ),
           IconButton(
             tooltip: 'Conditions',
             icon: const Icon(Icons.cloud_outlined),
@@ -104,6 +116,7 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
+          const SosBanner(),
           const HighWaterBanner(),
           const _MyHuntBanner(),
           const _ForgotCheckoutNotice(),

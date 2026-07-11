@@ -66,6 +66,12 @@ and change log). The original app lives untouched in `lop-app/` on `main`.
   firearm methods disappear from check-in club-wide (archery only) until the
   stage drops below 41.0 ft; admin override available.
 - **Wind chip** — current-hour wind + predicted scent direction in the status row.
+- **SOS** 🆕 — red button in the app bar: pick a situation (stuck / injured /
+  vehicle trouble), optional note, and send — your GPS location goes out as an
+  unmissable red banner to everyone with the app open (tap-to-navigate Maps
+  link + Call button), plus a prefilled group text to the Board (SMS works on
+  one bar where data won't). Leads with a Call 911 button — explicitly NOT an
+  emergency service. Anyone can mark it resolved.
 
 ## Tech
 Flutter (Material 3, ≥3.27) · Riverpod · Firebase Auth (anonymous) · Cloud

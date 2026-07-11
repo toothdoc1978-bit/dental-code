@@ -227,8 +227,35 @@ that caught a real bug in the initial fix for #2 before it shipped.
   Regular teenage/family hunters get individual roster entries (same pattern
   as existing Son/Wife/Grandson/Proxy rows), not the guest-name path.
 
+## Follow-up 8: SOS + web-first decision (v2.5)
+- **Web-first for year one, decided and recorded**: instant deploys during
+  heavy iteration, zero install friction, same Flutter codebase ships native
+  later (TestFlight when the Apple account clears). The one native-only win
+  is push notifications (matters for SOS + 8 PM reminders) — revisit next
+  summer.
+- **SOS feature**: red SOS button in the home app bar → screen that leads
+  with a **Call 911** button and plainly states this is not an emergency
+  service. Pick a situation (Stuck in the mud / Injured / Vehicle trouble /
+  Other) + optional note → best-effort GPS (10s hard timeout; a denied
+  prompt or failed fix NEVER blocks the send) → Firestore `sos` doc → every
+  open app shows an unmissable red banner (home + map) with tap-to-navigate
+  Apple Maps link, Call button, and Resolve (sender/admin in the UI; rules
+  let anyone resolve since the sender may be unable). After sending, a
+  prefilled **group text to Board members** opens (SMS gets through on one
+  bar where app data won't — the honest mitigation for web having no push).
+  Location is a Maps link rather than a pin on the aerial because the aerial
+  photo isn't georeferenced (possible later with 2-3 calibration points).
+- Rules: new `sos` collection (shape-checked create incl. lat/lng bounds and
+  a type enum that must stay hand-synced with `kSosTypes`; one-way resolve
+  with field whitelist). **Additive-only — safe to publish anytime**, unlike
+  the v2.4 migration.
+- New dep: `geolocator` (web-capable; browser permission prompt over HTTPS).
+  Note for the future native iOS build: Info.plist needs
+  NSLocationWhenInUseUsageDescription before location works there.
+
 ## Verification log
 - Baseline: analyze 0 errors / 11 infos; 9/9 tests pass.
 - After feature work: analyze **0 issues**; **35/35 tests pass**
   (units + widget smoke tests).
 - v2.4: analyze **0 issues**; **76/76 tests pass**.
+- v2.5: analyze **0 issues**; **86/86 tests pass**.

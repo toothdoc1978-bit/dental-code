@@ -6,6 +6,7 @@ import '../models/forecast.dart';
 import '../models/hunt.dart';
 import '../models/member.dart';
 import '../models/river_status.dart';
+import '../models/sos_alert.dart';
 import '../models/stand.dart';
 import '../services/firestore_service.dart';
 import '../services/river_service.dart';
@@ -67,6 +68,12 @@ final forecastProvider = StreamProvider<Forecast?>((ref) {
 
 final riverStatusProvider = StreamProvider<RiverStatus?>((ref) {
   return ref.watch(riverServiceProvider).streamStatus();
+});
+
+// --- SOS -------------------------------------------------------------------------
+
+final activeSosProvider = StreamProvider<List<SosAlert>>((ref) {
+  return ref.watch(firestoreServiceProvider).streamActiveSos();
 });
 
 // --- Club status (LDWF high-water archery rule) ---------------------------------
