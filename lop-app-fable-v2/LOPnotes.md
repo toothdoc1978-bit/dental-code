@@ -17,12 +17,25 @@
 ## Deploying a change (every time)
 ```bash
 cd ~/dental-code && git pull
+cp lop-app-fable-v2/pubspec.yaml ~/lop-web/pubspec.yaml
 rsync -a --exclude 'firebase_options.dart' lop-app-fable-v2/lib/ ~/lop-web/lib/
 cp -R lop-app-fable-v2/assets ~/lop-web/
 cd ~/lop-web
+flutter pub get
 flutter build web --release
 firebase deploy --only hosting
 ```
+⚠️ `pubspec.yaml` must be synced every time (learned the hard way in v2.5):
+it's the dependency list, and a new package added in the repo (geolocator)
+never reaches ~/lop-web otherwise — `flutter pub get` "succeeds" against the
+stale list and the build fails with "Couldn't resolve the package …".
+⚠️ NEVER run `flutter pub upgrade --major-versions` (or `pub upgrade` at all)
+in ~/lop-web or the repo — it rewrites the dependency list to next-generation
+major versions (Riverpod 3, Firebase 4/6…) the code isn't written for, and
+the build explodes with hundreds of StateProvider/valueOrNull errors. The
+"newer versions available" notes during pub get are informational, not a
+to-do list. If that command ever gets run by accident: re-copy the repo's
+pubspec.yaml over ~/lop-web's, `rm -f pubspec.lock`, `flutter pub get`.
 ⚠️ The `--exclude 'firebase_options.dart'` matters: the repo's copy of that
 file is a fake-key placeholder, and copying it over `~/lop-web`'s real one
 ships a build that can't reach Firebase at all — symptom is a totally blank
