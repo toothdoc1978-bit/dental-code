@@ -253,9 +253,74 @@ that caught a real bug in the initial fix for #2 before it shipped.
   Note for the future native iOS build: Info.plist needs
   NSLocationWhenInUseUsageDescription before location works there.
 
+## Follow-up 9: field-hardening from the adversarial audit (v2.6)
+Chad asked for a "Karpathy test" — three independent adversarial review
+passes (logic/correctness, rules-vs-writes, web/mobile failure modes) over
+the whole v2.5 codebase, each required to refute its own findings before
+reporting. The hunting-domain logic came back clean (activity/method matrix,
+hysteresis, squirrel exception, sweep boundary math, zero enum drift between
+Dart and rules). The surviving defects clustered around one systemic flaw —
+UI paths awaiting server-acked Firestore futures on a platform (web) where
+persistence was disabled — plus client-clock authority. All fixed here:
+
+- **Web offline persistence ENABLED** (main.dart): the deployed product is
+  the web app; "persistence is mobile-only, web is just for testing" was a
+  leftover from before Firebase Hosting. Single code path now, try/catch for
+  unsupported browsers.
+- **Check-in/check-out no longer block success on server ack**: the service
+  returns the write's ack future; the UI races it against a 3s timeout and
+  reports honestly either way ("…no signal, saved on this phone and will
+  sync"). Guard queries are individually try/caught + 4s-bounded — offline
+  they degrade to the documented accepted race instead of hanging the sheet.
+- **SOS is SMS-first and never waits for Firestore**: the write is fired
+  without awaiting (doc id pre-allocated), the group text opens immediately,
+  and a definitive server rejection surfaces a "the text/call is your alert"
+  snackbar. GPS acquisition is bounded at a hard 12s TOTAL (the old 10s
+  timeLimit didn't cover an unanswered permission prompt). SMS URI is now
+  hand-encoded (%20, not Dart's form-encoded '+' that iOS Messages renders
+  literally — SosAlert.smsUri, unit-tested). tel:911 and the SMS launch both
+  report failure instead of silently no-op'ing on desktop. Copy rewritten to
+  stop implying locked phones see alerts.
+- **The 8 PM sweep runs on the CLUB's clock** (utils/club_time.dart —
+  US Central with the fixed-in-law DST rule, no tz package): a member
+  leaving the app open in another timezone (or with a wrong clock) can no
+  longer close the whole board early. Swept hunts get checkOutTime = the
+  cutoff itself, not "whenever a device finally swept" (often next morning),
+  so logged durations stay honest. Per-doc try/catch so one failed update
+  doesn't abandon the rest of the sweep.
+- **Yellow-Tag-past-8-PM checkout no longer loses the deer count**: rules
+  gained a one-time count-backfill branch (only while a swept hunt's counts
+  are still null), the forgot-checkout notice grew an "Add count" dialog,
+  and a post-sweep checkout attempt now explains where to record the count
+  instead of a raw permission-denied.
+- **Double-occupancy aftermath handled**: the stand sheet prefers MY active
+  hunt on this stand over the by-code map's arbitrary winner, so if the
+  accepted check-in race ever double-books a stand, both hunters keep a
+  working Check Out.
+- **Shared caches hardened**: fetchedAt is server-stamped (a future-set
+  client clock could freeze the cache club-wide forever) and rules require
+  fetchedAt <= request.time; Forecast parsing skips malformed hour entries
+  instead of erroring the stream for every client; Hunt.fromDoc treats
+  wrong-typed allDay/guestNames as defaults instead of throwing in
+  club-wide list streams; hunts create rules type-check the display fields.
+- **Honesty fixes**: season summary card says "(covers the N most recent
+  hunts)" once the 500-doc query cap is near; auto-picked single methods
+  (Duck → Shotgun) are shown before submit; high-water override → Auto now
+  recomputes from the cached gauge immediately instead of staying stale up
+  to an hour; sign-in no longer mutates a provider during first build (a
+  debug/native soft-lock landmine).
+- **Still NEEDS-DEVICE-TEST** (code review can't prove platform behavior):
+  the multi-recipient prefilled group text on a real iPhone, and web
+  keyboard insets over the guest-name field. Known and accepted: browser
+  timers freeze when backgrounded, so the board clears at 8 PM only when
+  some device is foregrounded past the cutoff — inherent to a web app;
+  the strongest argument for the native build next year.
+
 ## Verification log
 - Baseline: analyze 0 errors / 11 infos; 9/9 tests pass.
 - After feature work: analyze **0 issues**; **35/35 tests pass**
   (units + widget smoke tests).
 - v2.4: analyze **0 issues**; **76/76 tests pass**.
 - v2.5: analyze **0 issues**; **86/86 tests pass**.
+- v2.6: analyze **0 issues**; **91/91 tests pass** (new: club-time DST
+  boundaries, cross-timezone sweep immunity, SMS URI encoding).

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' show Offset;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config.dart';
@@ -5,6 +6,7 @@ import '../models/hunt.dart';
 import '../models/member.dart';
 import '../models/sos_alert.dart';
 import '../models/stand.dart';
+import '../utils/club_time.dart';
 
 /// Thrown when a check-in is attempted on a stand someone else already holds.
 class StandOccupiedException implements Exception {
@@ -46,7 +48,12 @@ class FirestoreService {
   /// exact time plus whatever Mississippi River reading was already cached
   /// client-side (never fetched live here — check-in must never block on
   /// network).
-  Future<String> checkIn({
+  ///
+  /// Returns the new hunt's [id] immediately plus an [ack] future that
+  /// completes on SERVER confirmation. Callers must NOT block success
+  /// feedback on [ack] — offline it stays pending until signal returns while
+  /// the write is safely queued. Race it with a short timeout instead.
+  Future<({String id, Future<void> ack})> checkIn({
     required Stand stand,
     required String activity,
     required String method,
@@ -59,26 +66,42 @@ class FirestoreService {
     List<String> guestNames = const [],
     Member? responsibleAdult,
   }) async {
-    // One hunt per member, no matter which device started it.
-    final mine = await _hunts
-        .where('memberId', isEqualTo: member.id)
-        .where('active', isEqualTo: true)
-        .limit(1)
-        .get();
-    if (mine.docs.isNotEmpty) {
-      throw AlreadyCheckedInException(Hunt.fromDoc(mine.docs.first).standCode);
-    }
+    // Guard queries are best-effort and time-bounded: offline (or with an
+    // empty cache) they must degrade to the documented accepted race, never
+    // block the check-in itself. get() falls back to cache when offline; if
+    // even that fails or stalls, skip the guard.
+    try {
+      // One hunt per member, no matter which device started it.
+      final mine = await _hunts
+          .where('memberId', isEqualTo: member.id)
+          .where('active', isEqualTo: true)
+          .limit(1)
+          .get()
+          .timeout(const Duration(seconds: 4));
+      if (mine.docs.isNotEmpty) {
+        throw AlreadyCheckedInException(
+            Hunt.fromDoc(mine.docs.first).standCode);
+      }
+    } on AlreadyCheckedInException {
+      rethrow;
+    } catch (_) {/* offline/no cache — accepted race */}
 
-    final existing = await _hunts
-        .where('standCode', isEqualTo: stand.code)
-        .where('active', isEqualTo: true)
-        .limit(1)
-        .get();
-    if (existing.docs.isNotEmpty) {
-      throw StandOccupiedException(stand.code);
-    }
+    try {
+      final existing = await _hunts
+          .where('standCode', isEqualTo: stand.code)
+          .where('active', isEqualTo: true)
+          .limit(1)
+          .get()
+          .timeout(const Duration(seconds: 4));
+      if (existing.docs.isNotEmpty) {
+        throw StandOccupiedException(stand.code);
+      }
+    } on StandOccupiedException {
+      rethrow;
+    } catch (_) {/* offline/no cache — accepted race */}
 
-    final ref = await _hunts.add({
+    final ref = _hunts.doc();
+    final ack = ref.set({
       'standCode': stand.code,
       'activity': activity,
       'method': method,
@@ -102,7 +125,7 @@ class FirestoreService {
       'responsibleAdultName': responsibleAdult?.name,
       'createdAt': FieldValue.serverTimestamp(),
     });
-    return ref.id;
+    return (id: ref.id, ack: ack);
   }
 
   /// Closes an active hunt: records checkout time and (for deer hunts) counts.
@@ -121,6 +144,22 @@ class FirestoreService {
     });
   }
 
+  /// Records deer counts on a hunt the 8 PM sweep already closed — the
+  /// "I was still on the stand at 8" case. Rules allow this exactly once
+  /// (only while the swept hunt's counts are still null).
+  Future<void> backfillDeerCounts(
+    String huntId, {
+    required int doe,
+    required int buck,
+    required int fawn,
+  }) {
+    return _hunts.doc(huntId).update({
+      'doeSeen': doe,
+      'buckSeen': buck,
+      'fawnSeen': fawn,
+    });
+  }
+
   Stream<List<Hunt>> streamActiveHunts() {
     return _hunts.where('active', isEqualTo: true).snapshots().map(
           (snap) => snap.docs.map(Hunt.fromDoc).toList(),
@@ -129,7 +168,9 @@ class FirestoreService {
 
   /// Recent completed hunts, newest first, for the hunt log. Ordered by a
   /// single field then filtered client-side so no composite index is needed.
-  Stream<List<Hunt>> streamRecentHunts({int limit = 200}) {
+  /// NOTE: capped — season "totals" computed from this are totals over the
+  /// most recent [limit] hunts; the summary card says so once near the cap.
+  Stream<List<Hunt>> streamRecentHunts({int limit = 500}) {
     return _hunts
         .orderBy('checkInTime', descending: true)
         .limit(limit)
@@ -152,56 +193,80 @@ class FirestoreService {
   // --- 8 PM daily auto-checkout ----------------------------------------------
 
   /// Whether an active hunt should be swept: true once [now] is past the most
-  /// recent [hour]:00 AND the hunt started before that cutoff. A hunt begun
-  /// AFTER 8 PM survives until the next evening's sweep.
+  /// recent [hour]:00 **on the CLUB's clock** (US Central — see club_time.dart;
+  /// a member's device in another timezone must not sweep the shared board at
+  /// the wrong hour) AND the hunt started before that cutoff. A hunt begun
+  /// after 8 PM survives until the next evening's sweep.
   static bool shouldAutoClose(DateTime checkInTime, DateTime now,
       {int hour = kAutoCheckoutHour}) {
-    var cutoff = DateTime(now.year, now.month, now.day, hour);
-    if (now.isBefore(cutoff)) cutoff = cutoff.subtract(const Duration(days: 1));
-    return checkInTime.isBefore(cutoff);
+    return clubTime(checkInTime).isBefore(_cutoffWall(now, hour));
+  }
+
+  /// The most recent [hour]:00 club-wall-time at or before [now], as a
+  /// shifted club-wall DateTime (see club_time.dart).
+  static DateTime _cutoffWall(DateTime now, int hour) {
+    final nowClub = clubTime(now);
+    var cutoff = DateTime.utc(nowClub.year, nowClub.month, nowClub.day, hour);
+    if (nowClub.isBefore(cutoff)) cutoff = cutoff.subtract(const Duration(days: 1));
+    return cutoff;
   }
 
   /// Closes every active hunt that's past the 8 PM cutoff ([force] closes all
   /// of them — the admin "clear the board" action). Deer counts stay null —
-  /// forfeited by not checking out. Returns how many hunts were closed;
-  /// failures are swallowed (the next device to run will retry).
+  /// forfeited by not checking out (a hunter who was still out can backfill
+  /// them via [backfillDeerCounts]). Returns how many hunts were closed.
   Future<int> autoCheckoutSweep({bool force = false, DateTime? now}) async {
+    final QuerySnapshot<Map<String, dynamic>> snap;
     try {
-      final snap = await _hunts.where('active', isEqualTo: true).get();
-      final n = now ?? DateTime.now();
-      var closed = 0;
-      for (final doc in snap.docs) {
+      snap = await _hunts.where('active', isEqualTo: true).get();
+    } catch (_) {
+      return 0; // offline — the next device to run will sweep
+    }
+    final n = now ?? DateTime.now();
+    // Swept hunts get checkOutTime = the cutoff itself, not "whenever a
+    // device finally ran the sweep" (often the next morning, since browser
+    // timers freeze when phones are pocketed) — keeps logged durations honest.
+    final cutoffUtc = clubWallToUtc(_cutoffWall(n, kAutoCheckoutHour));
+    var closed = 0;
+    for (final doc in snap.docs) {
+      // Per-doc guard: one bad doc (or a race with another device's sweep)
+      // must not abandon the rest of the run.
+      try {
         final ci = (doc.data()['checkInTime'] as Timestamp?)?.toDate();
         if (force || (ci != null && shouldAutoClose(ci, n))) {
           await doc.reference.update({
             'active': false,
-            'checkOutTime': FieldValue.serverTimestamp(),
+            'checkOutTime': force
+                ? FieldValue.serverTimestamp()
+                : Timestamp.fromDate(cutoffUtc),
             'autoClosed': true,
           });
           closed++;
         }
-      }
-      return closed;
-    } catch (_) {
-      return 0;
+      } catch (_) {/* next sweep retries this one */}
     }
+    return closed;
   }
 
   // --- SOS ---------------------------------------------------------------------
 
   CollectionReference<Map<String, dynamic>> get _sos => _db.collection('sos');
 
-  /// Writes an SOS request. Just the Firestore write — GPS was already
-  /// captured (or not) by the caller; never blocks a call for help on network.
-  Future<String> sendSos({
+  /// Writes an SOS request. Returns the doc [id] IMMEDIATELY — the write is
+  /// never awaited here, because with no signal a Firestore future stays
+  /// pending until the server acks and an SOS must never wait on that. [ack]
+  /// resolves/errors when the server eventually confirms; callers may listen
+  /// but must not gate anything urgent on it.
+  ({String id, Future<void> ack}) sendSos({
     required Member member,
     required String type,
     String note = '',
     double? lat,
     double? lng,
     double? accuracyM,
-  }) async {
-    final ref = await _sos.add({
+  }) {
+    final ref = _sos.doc();
+    final ack = ref.set({
       'memberId': member.id,
       'memberName': member.name,
       'memberPhone': member.phone,
@@ -214,7 +279,7 @@ class FirestoreService {
       'createdAt': FieldValue.serverTimestamp(),
       'resolvedAt': null,
     });
-    return ref.id;
+    return (id: ref.id, ack: ack);
   }
 
   /// Marks an SOS handled. Anyone may resolve — the sender may be unable to.

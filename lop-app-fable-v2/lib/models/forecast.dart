@@ -66,13 +66,20 @@ class Forecast {
 
   factory Forecast.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? <String, dynamic>{};
-    final raw = (data['hours'] as List?) ?? const [];
+    final raw = (data['hours'] is List) ? data['hours'] as List : const [];
+    // Per-element tolerance: this doc is writable by any signed-in device,
+    // and one malformed hour must not turn the forecast stream into a
+    // club-wide error for every client.
+    final hours = <HourlyWeather>[];
+    for (final e in raw) {
+      try {
+        hours.add(HourlyWeather.fromMap((e as Map).cast<String, dynamic>()));
+      } catch (_) {/* skip the bad hour */}
+    }
     return Forecast(
       fetchedAt: (data['fetchedAt'] as Timestamp?)?.toDate() ??
           DateTime.fromMillisecondsSinceEpoch(0),
-      hours: raw
-          .map((e) => HourlyWeather.fromMap((e as Map).cast<String, dynamic>()))
-          .toList(),
+      hours: hours,
     );
   }
 }

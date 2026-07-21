@@ -91,6 +91,21 @@ permanently rejected (not retried).
 - **Web-first through the first season** (decided v2.5): instant deploys
   while iterating weekly; native iOS/Android later from the same codebase —
   the main thing it adds is push notifications (SOS + 8 PM reminders).
+- **v2.6 invariants — do not regress**: offline persistence stays ON for web
+  (main.dart); no UI path may `await` a Firestore write's server ack for
+  success feedback (race a short timeout instead — offline the future pends
+  forever); SOS opens the group text WITHOUT waiting for the Firestore
+  write; the 8 PM sweep uses club time (utils/club_time.dart), never device
+  local time; swept hunts stamp checkOutTime = the cutoff, and their deer
+  counts can be backfilled once (rules branch + home-screen notice).
+- **v2.6 rules must be published with (or right after) the v2.6 deploy** —
+  the deer-count backfill needs the new rules branch. The rules are
+  backward-compatible with the v2.5 app.
+- **Field test still owed on a real iPhone**: send a test SOS → confirm the
+  prefilled GROUP text opens with a readable body (not '+' between words)
+  and that Messages accepts multiple recipients with a prefilled body. If
+  iOS refuses the multi-recipient prefill, fall back to texting just the
+  first Board member (one-line change in sos_screen._textBoard).
 
 ## Known gotchas / lessons (carried forward + new)
 1. **Dart null-promotion**: test `if (x != null)` directly; never gate on a

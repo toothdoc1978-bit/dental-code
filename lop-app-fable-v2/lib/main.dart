@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,14 +21,21 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Offline persistence so check-ins work without signal in the field.
-  // Web handles caching differently (and this mobile-style setting can throw
-  // there), so it's mobile-only; browser testing doesn't need offline support.
-  if (!kIsWeb) {
+  // Offline persistence so check-ins work without signal in the field — on
+  // EVERY platform. The deployed product IS the web app (Firebase Hosting →
+  // iPhone Safari), so web persistence is not optional: without it a phone
+  // with no signal has no cached board, the check-in guard queries fail, and
+  // queued writes die with Safari's aggressive page reloads. (v2.5 and
+  // earlier skipped this on web — a leftover from when the web build was
+  // "just for testing".)
+  try {
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
+  } catch (_) {
+    // Unsupported browser (or a second tab holding the persistence lock) —
+    // the in-memory cache still works for this session.
   }
 
   runApp(const ProviderScope(child: LopApp()));
@@ -76,6 +82,12 @@ class _AuthGateState extends ConsumerState<_AuthGate> {
   Timer? _sweepTimer;
 
   Future<void> _doSignIn() async {
+    // Yield one microtask first: when auth.currentUser is already restored
+    // (returning user on mobile builds / tests), the provider write below
+    // would otherwise run synchronously DURING the first build — Riverpod's
+    // modify-while-building check throws and the app locks on the error
+    // screen. On web currentUser restores async, masking the bug.
+    await Future<void>.delayed(Duration.zero);
     final auth = FirebaseAuth.instance;
     final user = auth.currentUser ?? (await auth.signInAnonymously()).user;
     ref.read(authUidProvider.notifier).state = user?.uid;

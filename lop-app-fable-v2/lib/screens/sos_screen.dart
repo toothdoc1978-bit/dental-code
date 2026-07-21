@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +8,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../data/members.dart';
 import '../models/sos_alert.dart';
 import '../providers/app_providers.dart';
-import '../utils/format.dart';
 
 /// Request help on the property. NOT a 911 replacement — the screen leads
 /// with a Call 911 button. Sending writes an in-app alert (seen by everyone
@@ -78,7 +78,7 @@ class _SosScreenState extends ConsumerState<SosScreen> {
                       minimumSize: const Size.fromHeight(48)),
                   icon: const Icon(Icons.phone),
                   label: const Text('Call 911'),
-                  onPressed: () => launchUrl(Uri(scheme: 'tel', path: '911')),
+                  onPressed: _call911,
                 ),
               ),
             ],
@@ -127,9 +127,10 @@ class _SosScreenState extends ConsumerState<SosScreen> {
         ),
         const SizedBox(height: 10),
         Text(
-          'Sending shows a red alert with your GPS location to everyone who '
-          'has the app open, then offers a group text to the Board. It does '
-          'NOT contact emergency services.',
+          'Sending opens a group text to the Board — the most reliable way '
+          'to reach people out here — and posts a red alert with your GPS '
+          'location in the app, which members see the next time they look at '
+          'their phone. It does NOT contact emergency services.',
           style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
         ),
       ],
@@ -158,8 +159,10 @@ class _SosScreenState extends ConsumerState<SosScreen> {
                       color: Colors.red.shade900)),
               const SizedBox(height: 4),
               Text(
-                'Sent ${fmtElapsed(sos.createdAt)} ago. Everyone with the app '
-                'open can see it${sos.hasLocation ? ' and your location' : ''}.',
+                'Members will see this alert'
+                '${sos.hasLocation ? ' and your location' : ''} next time '
+                'they look at the app. The group text below is the most '
+                'reliable way to reach people right now.',
                 style: TextStyle(color: Colors.grey.shade800, fontSize: 13),
               ),
             ],
@@ -202,82 +205,112 @@ class _SosScreenState extends ConsumerState<SosScreen> {
     setState(() => _sending = true);
     final messenger = ScaffoldMessenger.of(context);
 
-    // Best-effort GPS with a hard timeout — a denied prompt or a slow fix
-    // must never block a call for help.
-    double? lat, lng, accuracyM;
+    // Best-effort GPS, bounded HARD at 12s total. The inner 10s timeLimit
+    // only covers the fix itself — the browser permission prompt can sit
+    // unanswered indefinitely, and a panicked user must not be stuck behind
+    // it. No fix → send without coordinates.
+    var fix = (lat: null as double?, lng: null as double?, acc: null as double?);
+    try {
+      fix = await _getFix().timeout(const Duration(seconds: 12));
+    } catch (_) {/* timeout/denied/unsupported — send anyway */}
+
+    // Fire the Firestore write WITHOUT waiting for the server: offline it
+    // stays queued (and pending) until signal returns, and the group text —
+    // the channel that actually works on one bar — must not wait behind it.
+    final res = ref.read(firestoreServiceProvider).sendSos(
+          member: member,
+          type: _type!,
+          note: _note.text.trim(),
+          lat: fix.lat,
+          lng: fix.lng,
+          accuracyM: fix.acc,
+        );
+    unawaited(res.ack.then<void>((_) {}, onError: (Object e) {
+      // Definitive server rejection (not mere offline) — tell them the app
+      // alert did NOT post, so the text/call is their only alert.
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(
+            content: Text('The in-app alert could not be posted ($e) — '
+                'the group text or a phone call is your alert.')));
+      }
+    }));
+
+    HapticFeedback.heavyImpact();
+    if (!mounted) return;
+    setState(() => _sending = false);
+    final sos = SosAlert(
+      id: res.id,
+      memberId: member.id,
+      memberName: member.name,
+      memberPhone: member.phone,
+      type: _type!,
+      note: _note.text.trim(),
+      lat: fix.lat,
+      lng: fix.lng,
+    );
+    await _textBoard(sos);
+  }
+
+  Future<void> _call911() async {
+    final messenger = ScaffoldMessenger.of(context);
+    var ok = false;
+    try {
+      ok = await launchUrl(Uri(scheme: 'tel', path: '911'));
+    } catch (_) {
+      ok = false;
+    }
+    if (!ok && mounted) {
+      messenger.showSnackBar(const SnackBar(
+          content: Text('This device cannot place calls — dial 911 from a '
+              'phone.')));
+    }
+  }
+
+  /// GPS permission + fix. Returns nulls on any failure; never throws except
+  /// via the caller's outer timeout.
+  Future<({double? lat, double? lng, double? acc})> _getFix() async {
     try {
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission != LocationPermission.denied &&
-          permission != LocationPermission.deniedForever) {
-        final pos = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            timeLimit: Duration(seconds: 10),
-          ),
-        );
-        lat = pos.latitude;
-        lng = pos.longitude;
-        accuracyM = pos.accuracy;
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return (lat: null, lng: null, acc: null);
       }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+      return (lat: pos.latitude, lng: pos.longitude, acc: pos.accuracy);
     } catch (_) {
-      // No fix — send anyway.
-    }
-
-    try {
-      final id = await ref.read(firestoreServiceProvider).sendSos(
-            member: member,
-            type: _type!,
-            note: _note.text.trim(),
-            lat: lat,
-            lng: lng,
-            accuracyM: accuracyM,
-          );
-      HapticFeedback.heavyImpact();
-      if (!mounted) return;
-      setState(() => _sending = false);
-      // Offer the SMS fallback immediately with the freshly-built alert.
-      final sos = SosAlert(
-        id: id,
-        memberId: member.id,
-        memberName: member.name,
-        memberPhone: member.phone,
-        type: _type!,
-        note: _note.text.trim(),
-        lat: lat,
-        lng: lng,
-      );
-      await _textBoard(sos);
-    } catch (e) {
-      if (mounted) setState(() => _sending = false);
-      messenger.showSnackBar(
-        SnackBar(
-            content: Text('SOS could not be sent: $e — '
-                'call or text someone directly.')),
-      );
+      return (lat: null, lng: null, acc: null);
     }
   }
 
   /// Prefilled group text to Board members (SMS beats app data on weak signal).
   Future<void> _textBoard(SosAlert sos) async {
+    final messenger = ScaffoldMessenger.of(context);
     final numbers = kMembers
         .where((m) => m.role == 'Board')
         .map((m) => m.digits)
         .where((d) => d.isNotEmpty)
         .toList();
     if (numbers.isEmpty) return;
-    final uri = Uri(
-      scheme: 'sms',
-      path: numbers.join(','),
-      queryParameters: {'body': sos.smsBody},
-    );
+    var opened = false;
     try {
-      await launchUrl(uri);
+      opened = await launchUrl(SosAlert.smsUri(numbers, sos.smsBody));
     } catch (_) {
-      // Messages app unavailable (e.g. desktop browser) — in-app alert is
-      // already live, so nothing further to do.
+      opened = false;
+    }
+    if (!opened && mounted) {
+      // No Messages app (desktop browser, etc.) — don't let them assume a
+      // text went out.
+      messenger.showSnackBar(const SnackBar(
+          content: Text('Could not open Messages on this device — no text '
+              'was sent. Call a Board member directly.')));
     }
   }
 }

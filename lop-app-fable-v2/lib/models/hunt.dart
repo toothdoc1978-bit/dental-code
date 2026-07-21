@@ -112,9 +112,14 @@ class Hunt {
       riverVicksburgFt: (data['riverVicksburgFt'] as num?)?.toDouble(),
       riverGreenvilleFt: (data['riverGreenvilleFt'] as num?)?.toDouble(),
       riverObservedAt: (data['riverObservedAt'] as Timestamp?)?.toDate(),
-      autoClosed: data['autoClosed'] as bool? ?? false,
-      allDay: data['allDay'] as bool? ?? false,
-      guestNames: (data['guestNames'] as List?)?.cast<String>() ?? const [],
+      // Equality/whereType instead of casts: hunts render in club-wide list
+      // streams, so ONE doc with a wrong-typed field (buggy or hand-edited)
+      // must degrade to a default, not throw for all 36 members.
+      autoClosed: data['autoClosed'] == true,
+      allDay: data['allDay'] == true,
+      guestNames: (data['guestNames'] is List)
+          ? (data['guestNames'] as List).whereType<String>().toList()
+          : const [],
       responsibleAdultMemberId: data['responsibleAdultMemberId'] as String?,
       responsibleAdultName: data['responsibleAdultName'] as String?,
     );

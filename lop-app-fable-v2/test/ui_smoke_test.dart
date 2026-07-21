@@ -81,6 +81,13 @@ Widget _app({List<Override> overrides = const [], Widget home = const HomeScreen
   return ProviderScope(overrides: overrides, child: MaterialApp(home: home));
 }
 
+/// FilledButton.icon builds a private FilledButton SUBCLASS on some Flutter
+/// versions, which exact-type finders (widgetWithText/byType) miss — match by
+/// `is` instead so these tests don't depend on the SDK's internals.
+Finder _filledButtonWithText(String text) => find.ancestor(
+    of: find.text(text),
+    matching: find.byWidgetPredicate((w) => w is FilledButton));
+
 List<Override> _baseOverrides({
   Hunt? myHunt,
   List<Hunt> active = const [],
@@ -353,7 +360,7 @@ void main() {
     expect(find.text('Rifle'), findsOneWidget);
 
     final checkInButton =
-        find.widgetWithText(FilledButton, 'Check In').first;
+        _filledButtonWithText('Check In').first;
     expect(tester.widget<FilledButton>(checkInButton).onPressed, isNull);
 
     await tester.tap(find.text('Bow'));
@@ -442,12 +449,12 @@ void main() {
     expect(find.text('Call 911'), findsOneWidget);
     expect(find.textContaining('call 911 FIRST'), findsOneWidget);
 
-    final send = find.widgetWithText(FilledButton, 'Send SOS');
-    expect(tester.widget<FilledButton>(send).onPressed, isNull);
+    final send = _filledButtonWithText('Send SOS');
+    expect(tester.widget<FilledButton>(send.first).onPressed, isNull);
 
     await tester.tap(find.text('Stuck in the mud'));
     await tester.pump();
-    expect(tester.widget<FilledButton>(send).onPressed, isNotNull);
+    expect(tester.widget<FilledButton>(send.first).onPressed, isNotNull);
 
     await tester.pumpWidget(const SizedBox());
   });

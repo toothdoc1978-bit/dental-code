@@ -69,12 +69,15 @@ class RiverService {
           waterTempF == null) {
         return;
       }
-      await _doc.set(RiverStatus(
+      // Server-stamped fetchedAt (see weather_service.dart for why).
+      final map = RiverStatus(
         fetchedAt: DateTime.now(),
         vicksburg: gauges[0],
         greenville: gauges[1],
         waterTempF: waterTempF,
-      ).toMap());
+      ).toMap()
+        ..['fetchedAt'] = FieldValue.serverTimestamp();
+      await _doc.set(map);
       await _updateHighWater(gauges[0].observedFt);
     } catch (_) {
       // Offline or API hiccup — keep whatever is already cached.
@@ -88,11 +91,24 @@ class RiverService {
       _clubDoc.snapshots().map((s) => s.exists ? ClubStatus.fromDoc(s) : null);
 
   /// Admin override: force the high-water rule on/off, or return to auto.
-  Future<void> setHighWaterMode(HighWaterMode mode) {
-    return _clubDoc.set({
+  Future<void> setHighWaterMode(HighWaterMode mode) async {
+    await _clubDoc.set({
       'highWaterMode': mode.name,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+    // Returning to auto: recompute NOW from the cached gauge. While an
+    // override was active the stored auto flag stopped tracking the river,
+    // so without this the rule can read stale (wrongly off during a legal
+    // archery-only stage) for up to an hour until the next TTL refetch.
+    if (mode == HighWaterMode.auto) {
+      try {
+        final snap = await _doc.get();
+        final vburg = ((snap.data()?['vicksburg'] as Map?)?['observedFt']
+                as num?)
+            ?.toDouble();
+        await _updateHighWater(vburg);
+      } catch (_) {/* offline — next refetch recomputes */}
+    }
   }
 
   /// Applies the gauge reading to the automatic high-water state. Only writes

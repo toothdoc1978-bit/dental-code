@@ -68,6 +68,13 @@ class SosAlert {
     return 'SOS from $memberName — $type.$extra $where';
   }
 
+  /// The group-text URI. Built by hand because Dart's `Uri(queryParameters:)`
+  /// form-encodes spaces as `+`, which iOS Messages does NOT decode — the
+  /// prefilled body would arrive as `SOS+from+Chad+...`. `encodeComponent`
+  /// uses `%20`, which Messages handles.
+  static Uri smsUri(List<String> numbers, String body) =>
+      Uri.parse('sms:${numbers.join(',')}?body=${Uri.encodeComponent(body)}');
+
   factory SosAlert.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? <String, dynamic>{};
     return SosAlert(

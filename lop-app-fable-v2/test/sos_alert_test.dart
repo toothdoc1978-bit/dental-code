@@ -61,4 +61,19 @@ void main() {
     expect(kSosTypes,
         ['Stuck in the mud', 'Injured', 'Vehicle trouble', 'Other']);
   });
+
+  group('smsUri', () {
+    test('encodes spaces as %20 (never +, which iOS Messages shows literally)',
+        () {
+      final uri = SosAlert.smsUri(
+          ['3181234567', '3187654321'], 'SOS from Chad — Stuck in the mud');
+      final s = uri.toString();
+      expect(s, startsWith('sms:3181234567,3187654321?body='));
+      expect(s, isNot(contains('+')));
+      expect(s, contains('%20'));
+      // Round-trips back to the original text.
+      expect(Uri.decodeComponent(s.split('body=').last),
+          'SOS from Chad — Stuck in the mud');
+    });
+  });
 }

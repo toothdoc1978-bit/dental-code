@@ -40,6 +40,19 @@ service cloud.firestore {
         && request.resource.data.method in
             ['Rifle', 'Suppressed Rifle', 'Primitive Firearm', 'Shotgun',
              'Bow', 'Crossbow', 'None']
+        // Type-check the display fields too: hunts render in club-wide list
+        // streams, so a single wrong-typed doc would break screens for
+        // every member, is impossible to repair in-app (updates are
+        // whitelisted, deletes denied), and the web config is public enough
+        // that "our app never writes that" is not a shape guarantee.
+        && request.resource.data.memberPhone is string
+        && request.resource.data.memberPhone.size() <= 30
+        && request.resource.data.allDay is bool
+        && request.resource.data.guestNames is list
+        && request.resource.data.guestNames.size() <= 10
+        && (request.resource.data.responsibleAdultName == null
+            || (request.resource.data.responsibleAdultName is string
+                && request.resource.data.responsibleAdultName.size() <= 60))
         // Deer counts are only recorded at check-out.
         && request.resource.data.doeSeen == null
         && request.resource.data.buckSeen == null
@@ -52,11 +65,22 @@ service cloud.firestore {
       // neither is verifiable under anonymous auth, so a device-owner check
       // here would only break those flows without adding real security.
       allow update: if request.auth != null
-        && resource.data.active == true
-        && request.resource.data.active == false
-        && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['active', 'checkOutTime', 'doeSeen', 'buckSeen',
-                      'fawnSeen', 'autoClosed'])
+        && (
+          // Normal check-out / 8 PM sweep: one-way active -> false.
+          (resource.data.active == true
+            && request.resource.data.active == false
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['active', 'checkOutTime', 'doeSeen', 'buckSeen',
+                          'fawnSeen', 'autoClosed']))
+          // One-time deer-count backfill on a hunt the sweep closed while
+          // the hunter was still on the stand (allowed only while the swept
+          // hunt's counts are still null, so history can't be re-edited).
+          || (resource.data.active == false
+            && resource.data.autoClosed == true
+            && resource.data.doeSeen == null
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['doeSeen', 'buckSeen', 'fawnSeen']))
+        )
         && validCount(request.resource.data.doeSeen)
         && validCount(request.resource.data.buckSeen)
         && validCount(request.resource.data.fawnSeen);
@@ -73,11 +97,15 @@ service cloud.firestore {
     }
 
     // Shared weather forecast cache (single doc: forecast/today).
+    // fetchedAt <= request.time: a device with a future-set clock could
+    // otherwise freeze the cache club-wide (every reader would compute
+    // "still fresh" forever). The app writes serverTimestamp, which passes.
     match /forecast/{doc} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
         && doc == 'today'
         && request.resource.data.fetchedAt is timestamp
+        && request.resource.data.fetchedAt <= request.time
         && request.resource.data.hours is list
         && request.resource.data.hours.size() <= 48;
     }
@@ -87,7 +115,8 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow write: if request.auth != null
         && doc == 'current'
-        && request.resource.data.fetchedAt is timestamp;
+        && request.resource.data.fetchedAt is timestamp
+        && request.resource.data.fetchedAt <= request.time;
     }
 
     // SOS requests. Create with a sane shape; anyone signed-in may resolve

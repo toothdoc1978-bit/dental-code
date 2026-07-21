@@ -354,6 +354,11 @@ class _ForgotCheckoutNoticeState extends ConsumerState<_ForgotCheckoutNotice> {
       return const SizedBox.shrink();
     }
 
+    // A swept deer hunt still owes its count — offer to backfill (the rules
+    // allow exactly one count write on an auto-closed hunt).
+    final owesCount =
+        requiresDeerCount(myLatest.activity) && myLatest.doeSeen == null;
+
     return Material(
       color: Colors.amber.shade100,
       child: Padding(
@@ -365,10 +370,18 @@ class _ForgotCheckoutNoticeState extends ConsumerState<_ForgotCheckoutNotice> {
             Expanded(
               child: Text(
                 'You were auto-checked out of Stand ${myLatest.standCode} at '
-                '8 PM — please check out when you leave your stand.',
+                '8 PM — please check out when you leave your stand.'
+                '${owesCount ? ' Still need your deer count.' : ''}',
                 style: const TextStyle(fontSize: 13),
               ),
             ),
+            if (owesCount)
+              TextButton(
+                style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact),
+                onPressed: () => _backfillDialog(myLatest.id),
+                child: const Text('Add count'),
+              ),
             IconButton(
               icon: const Icon(Icons.close, size: 18),
               tooltip: 'Dismiss',
@@ -381,6 +394,57 @@ class _ForgotCheckoutNoticeState extends ConsumerState<_ForgotCheckoutNotice> {
         ),
       ),
     );
+  }
+
+  Future<void> _backfillDialog(String huntId) async {
+    final doe = TextEditingController();
+    final buck = TextEditingController();
+    final fawn = TextEditingController();
+    final counts = await showDialog<({int doe, int buck, int fawn})>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Deer seen'),
+        content: Row(
+          children: [
+            for (final (c, label) in [(doe, 'Does'), (buck, 'Bucks'), (fawn, 'Fawns')])
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: TextField(
+                    controller: c,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                        labelText: label,
+                        isDense: true,
+                        border: const OutlineInputBorder()),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              final d = int.tryParse(doe.text.trim());
+              final b = int.tryParse(buck.text.trim());
+              final f = int.tryParse(fawn.text.trim());
+              if (d != null && d >= 0 && b != null && b >= 0 && f != null && f >= 0) {
+                Navigator.pop(ctx, (doe: d, buck: b, fawn: f));
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (counts == null) return;
+    await ref.read(firestoreServiceProvider).backfillDeerCounts(huntId,
+        doe: counts.doe, buck: counts.buck, fawn: counts.fawn);
+    AckStore.ack(huntId);
+    if (mounted) setState(() => _acked = huntId);
   }
 }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart' show FirebaseException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,8 +51,13 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final memberId = ref.watch(currentMemberProvider)?.id;
-    final hunt = ref.watch(activeHuntsByCodeProvider)[stand.code];
     final myHunt = ref.watch(myActiveHuntProvider).valueOrNull;
+    var hunt = ref.watch(activeHuntsByCodeProvider)[stand.code];
+    // If I hold an active hunt on THIS stand, always show it as mine. The
+    // by-code map keeps only one hunt per stand, so if the accepted
+    // double-occupancy race ever puts two hunts on a stand, the dropped
+    // hunter would otherwise see _takenBody with no Check Out path at all.
+    if (myHunt != null && myHunt.standCode == stand.code) hunt = myHunt;
 
     // SingleChildScrollView is required, not decorative: the open-check-in
     // body now stacks hunt-type chips + an all-day switch + a guest expander,
@@ -197,6 +204,12 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
                 ),
             ],
           ),
+        ] else if (_selectedMethod != null && _selectedMethod != 'None') ...[
+          // Single legal method auto-picked (e.g. Duck → Shotgun): say so
+          // instead of silently recording a choice the member never saw.
+          const SizedBox(height: 8),
+          Text('Method: $_selectedMethod',
+              style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
         ],
         const SizedBox(height: 12),
         SwitchListTile(
@@ -490,7 +503,7 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
           .map((s) => s.trim())
           .where((s) => s.isNotEmpty)
           .toList();
-      await ref.read(firestoreServiceProvider).checkIn(
+      final res = await ref.read(firestoreServiceProvider).checkIn(
             stand: stand,
             activity: _selectedActivity!,
             method: _selectedMethod!,
@@ -503,10 +516,24 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
             guestNames: guestNames,
             responsibleAdult: _responsibleAdult,
           );
+      // Success feedback must not wait on the server: with no signal the
+      // write is queued locally and the ack stays pending until sync. Race
+      // it briefly, then be honest either way.
+      var synced = true;
+      try {
+        await res.ack.timeout(const Duration(seconds: 3));
+      } on TimeoutException {
+        synced = false;
+        unawaited(res.ack.catchError((_) {})); // board stream is the truth
+      }
       HapticFeedback.mediumImpact();
       navigator.pop();
       messenger.showSnackBar(
-        SnackBar(content: Text('Checked in to Stand ${stand.code}')),
+        SnackBar(
+            content: Text(synced
+                ? 'Checked in to Stand ${stand.code}'
+                : 'Checked in to Stand ${stand.code} — no signal, saved on '
+                    'this phone and will sync')),
       );
     } on StandOccupiedException catch (e) {
       if (mounted) setState(() => _busy = false);
@@ -525,14 +552,34 @@ class _StandDetailSheetState extends ConsumerState<StandDetailSheet> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
-      await ref
+      final ack = ref
           .read(firestoreServiceProvider)
           .checkOut(hunt.id, doe: doe, buck: buck, fawn: fawn);
+      var synced = true;
+      try {
+        await ack.timeout(const Duration(seconds: 3));
+      } on TimeoutException {
+        synced = false;
+        unawaited(ack.catchError((_) {}));
+      }
       HapticFeedback.mediumImpact();
       navigator.pop();
       messenger.showSnackBar(
-        SnackBar(content: Text('Checked out of Stand ${stand.code}')),
+        SnackBar(
+            content: Text(synced
+                ? 'Checked out of Stand ${stand.code}'
+                : 'Checked out of Stand ${stand.code} — no signal, saved on '
+                    'this phone and will sync')),
       );
+    } on FirebaseException catch (e) {
+      if (mounted) setState(() => _busy = false);
+      // permission-denied here almost always means the 8 PM sweep closed
+      // this hunt first — point at the recovery path instead of jargon.
+      messenger.showSnackBar(SnackBar(
+          content: Text(e.code == 'permission-denied'
+              ? 'This hunt was already auto-closed (8 PM sweep). Your deer '
+                  'count can be added from the notice on the home screen.'
+              : 'Check-out failed: ${e.message ?? e.code}')));
     } catch (e) {
       if (mounted) setState(() => _busy = false);
       messenger.showSnackBar(SnackBar(content: Text('Check-out failed: $e')));

@@ -2,7 +2,7 @@
 // rule, and admin access.
 
 /// Shown in-app so you can tell at a glance which build is deployed.
-const String kAppVersion = 'v2.5';
+const String kAppVersion = 'v2.6';
 
 /// Every active hunt is auto-checked-out daily at this hour (24h clock).
 /// Enforced client-side: the first running app past the hour sweeps the board.

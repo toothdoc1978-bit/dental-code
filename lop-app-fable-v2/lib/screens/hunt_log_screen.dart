@@ -136,6 +136,12 @@ class _SummaryCard extends StatelessWidget {
           children: [
             Text(mineOnly ? 'My season' : 'Club season',
                 style: const TextStyle(fontWeight: FontWeight.w600)),
+            // The query is capped at 500 docs — never present a truncated
+            // window as a full-season total.
+            if (hunts.length >= 450)
+              Text('(covers the ${hunts.length} most recent hunts)',
+                  style:
+                      TextStyle(fontSize: 11, color: Colors.grey.shade700)),
             const SizedBox(height: 10),
             Row(
               children: [

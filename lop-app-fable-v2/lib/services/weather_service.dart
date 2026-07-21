@@ -36,7 +36,12 @@ class WeatherService {
         }
       }
       final forecast = await fetchOpenMeteo();
-      await _doc.set(forecast.toMap());
+      // Server-stamped fetchedAt: a device with a future-set clock would
+      // otherwise freeze the shared cache club-wide (every reader computes
+      // "still fresh" forever). Rules enforce fetchedAt <= request.time.
+      final map = forecast.toMap()
+        ..['fetchedAt'] = FieldValue.serverTimestamp();
+      await _doc.set(map);
     } catch (_) {
       // Offline or API hiccup — keep whatever is already cached.
     }
