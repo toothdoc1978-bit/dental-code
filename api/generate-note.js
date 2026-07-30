@@ -1,4 +1,5 @@
 import { generateNote } from '../server/noteGenerator.js'
+import { findPhiKey } from '../server/phiGuard.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -10,10 +11,8 @@ export default async function handler(req, res) {
     const { chartData } = req.body || {}
     if (!chartData) return res.status(400).json({ error: 'Missing chartData' })
 
-    const phiFields = ['patientName', 'name', 'dob', 'medicaidId', 'ssn', 'address', 'phone']
-    for (const k of phiFields) {
-      if (k in chartData) return res.status(400).json({ error: `PHI field "${k}" not permitted` })
-    }
+    const phiKey = findPhiKey(chartData)
+    if (phiKey) return res.status(400).json({ error: `PHI field "${phiKey}" not permitted` })
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured on the server' })

@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import { generateNote } from './noteGenerator.js'
+import { findPhiKey } from './phiGuard.js'
 import intakeFetchHandler from '../api/intake-fetch.js'
 
 dotenv.config()
@@ -23,10 +24,8 @@ app.post('/api/generate-note', async (req, res) => {
     const { chartData } = req.body || {}
     if (!chartData) return res.status(400).json({ error: 'Missing chartData' })
 
-    const phiFields = ['patientName', 'name', 'dob', 'medicaidId', 'ssn', 'address', 'phone']
-    for (const k of phiFields) {
-      if (k in chartData) return res.status(400).json({ error: `PHI field "${k}" not permitted` })
-    }
+    const phiKey = findPhiKey(chartData)
+    if (phiKey) return res.status(400).json({ error: `PHI field "${phiKey}" not permitted` })
 
     if (!process.env.ANTHROPIC_API_KEY) {
       return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set on server. Add it to .env and restart.' })

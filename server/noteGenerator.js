@@ -687,7 +687,7 @@ export async function generateNote(rawData) {
 
   const response = await createWithRetry({
     model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
+    max_tokens: 2048,
     temperature: 1,
     // The system prompt is byte-identical on every call, so mark it cacheable.
     // Repeat generations within the cache window read the ~3.7K-token prefix at
