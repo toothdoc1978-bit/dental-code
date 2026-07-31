@@ -1,0 +1,39 @@
+{
+  "name": "dental-code",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n vite,server -c blue,green \"vite\" \"node server/index.js\"",
+    "dev:client": "vite",
+    "dev:server": "node server/index.js",
+    "dev:intake": "concurrently -n vite,server,mock -c blue,green,magenta \"vite\" \"INTAKE_MIDDLEWARE_URL=http://localhost:4000 INTAKE_SHARED_SECRET=test-secret node server/index.js\" \"node scripts/dev-mock-intake.mjs\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "eval": "node evals/run.mjs",
+    "eval:seed": "node evals/run.mjs --seed-only",
+    "eval:generate": "node evals/generate.mjs",
+    "eval:coding": "node evals/coding-validation.test.mjs",
+    "eval:conflicts": "node evals/conflict-validation.test.mjs",
+    "eval:dentition": "node evals/dentition-validation.test.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.9",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.0.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.14",
+    "vite": "^5.4.10"
+  }
+}
