@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Tile, CheckChip, Section, YesNo, PageTitle } from './shared.jsx'
 import {
   EPSDT_RISK_FACTORS_RISK,
@@ -8,13 +7,8 @@ import {
 } from '../data/examDefaults.js'
 
 export default function EpsdtScreening({ store }) {
-  const { state, setField, toggleItem, seedEpsdtDefaults } = store
+  const { state, setField, toggleItem } = store
   const e = state.epsdtScreening
-
-  useEffect(() => {
-    if (!state.epsdtDefaultsApplied) seedEpsdtDefaults()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   return (
     <div>

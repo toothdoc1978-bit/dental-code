@@ -1,5 +1,6 @@
 import { Tile, CheckChip, Section, PageTitle } from './shared.jsx'
 import { OCCLUSION_HABITS } from '../data/examDefaults.js'
+import { filterOcclusionHabits } from '../data/ageBands.js'
 
 export default function OcclusionExam({ store }) {
   const { state, setField, toggleItem } = store
@@ -54,7 +55,7 @@ export default function OcclusionExam({ store }) {
 
       <Section title="Habits">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {OCCLUSION_HABITS.map((h) => (
+          {filterOcclusionHabits(OCCLUSION_HABITS, state.visitSetup.age).map((h) => (
             <CheckChip key={h} active={o.habits.includes(h)} onClick={() => toggleItem('occlusion.habits', h)}>{h}</CheckChip>
           ))}
         </div>

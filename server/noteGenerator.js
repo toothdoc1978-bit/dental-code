@@ -45,7 +45,8 @@ const ALLOWED_KEYS = new Set([
   'treatmentPlan',
   'patientEducation',
   'scheduledTreatment',
-  'signedConsents'
+  'signedConsents',
+  'softTissueExamined'
 ])
 
 function sanitize(data) {
@@ -315,10 +316,20 @@ function buildEpsdt(e) {
   return parts.join('; ')
 }
 
-function buildSoftTissue(s) {
+function buildSoftTissue(s, examined, visitType) {
   const labels = { lips: 'Lips', buccalMucosa: 'Buccal mucosa', hardPalate: 'Hard palate', softPalate: 'Soft palate', tongue: 'Tongue', floorOfMouth: 'Floor of mouth', gingiva: 'Gingiva', oropharynx: 'Oropharynx', lymphNodes: 'Lymph nodes', tmj: 'TMJ' }
   const abnormal = Object.entries(s).filter(([, v]) => v !== 'wnl')
-  if (!abnormal.length) return 'Soft tissue examination within normal limits in all areas'
+  if (!abnormal.length) {
+    // examined === false means the step was never opened: the all-WNL defaults
+    // must not be reported as a completed negative exam. undefined (older
+    // payloads without the flag) keeps the historical behavior.
+    if (examined === false) {
+      return ['limited', 'emergency'].includes(visitType)
+        ? 'Focused examination limited to the area of chief complaint; comprehensive soft tissue examination not performed this visit'
+        : 'Soft tissue examination not documented'
+    }
+    return 'Soft tissue examination within normal limits in all areas'
+  }
   const findings = abnormal.map(([k, v]) => `${labels[k]}: ${v}`).join('; ')
   const wnlAreas = Object.entries(s).filter(([, v]) => v === 'wnl').map(([k]) => labels[k]).join(', ')
   return `Soft tissue findings: ${findings}. Remaining areas (${wnlAreas}) within normal limits`
@@ -629,7 +640,28 @@ Rules:
 
 19. DRUG-ALLERGY ALERT — when the user prompt contains a DRUG_ALLERGY_ALERT block, it has detected a documented allergy that conflicts with a drug recorded for this visit. Follow that block exactly: surface each conflict as an explicit patient-safety flag in the Subjective medical-history review (and in the Plan when a prescription is involved), naming both the allergy and the conflicting drug and stating it as a potential contraindication the treating dentist must verify and reconcile before finalizing the record. This is a hard requirement — do NOT omit it, do NOT bury it, and do NOT assert the conflict was clinically cleared, tolerated, or resolved (that would be fabricated). When DRUG_ALLERGY_ALERT is NOT present, do not invent allergy-conflict language.
 
-20. DENTITION-MISMATCH FLAG — when the user prompt contains a DENTITION_MISMATCH_FLAG block, the chart contains a tooth identification that is inconsistent with the recorded patient age. Follow that block exactly: surface each flagged tooth as a documentation discrepancy that should be verified, naming the tooth and the age inconsistency. The natural home is the Subjective medical-history / charting review or the Objective hard-tissue findings — whichever fits the surrounding narrative. Do NOT silently re-letter or re-number the tooth, do NOT assert the chart is correct, and do NOT assert the chart is wrong (retained primary teeth and unusually early erupters are clinically real). When DENTITION_MISMATCH_FLAG is NOT present, do not invent dentition-mismatch language.`
+20. DENTITION-MISMATCH FLAG — when the user prompt contains a DENTITION_MISMATCH_FLAG block, the chart contains a tooth identification that is inconsistent with the recorded patient age. Follow that block exactly: surface each flagged tooth as a documentation discrepancy that should be verified, naming the tooth and the age inconsistency. The natural home is the Subjective medical-history / charting review or the Objective hard-tissue findings — whichever fits the surrounding narrative. Do NOT silently re-letter or re-number the tooth, do NOT assert the chart is correct, and do NOT assert the chart is wrong (retained primary teeth and unusually early erupters are clinically real). When DENTITION_MISMATCH_FLAG is NOT present, do not invent dentition-mismatch language.
+
+21. EXAM SCOPE — when the user prompt contains an EXAM_SCOPE block, the visit was a problem-focused evaluation and the sections named there were intentionally not performed. Include ONE brief sentence in the Objective acknowledging the limited scope (e.g., "Examination was problem-focused and limited to the area of the chief complaint"). Never characterize the named sections as missing, deficient, or deferred in error, and never write findings for them. When EXAM_SCOPE is NOT present, write nothing about examination scope.`
+
+function buildExamScopeBlock(data) {
+  const v = data.visitSetup || {}
+  if (!['limited', 'emergency'].includes(v.visitType)) return ''
+  const p = data.perio || {}
+  const o = data.occlusion || {}
+  const perioEmpty =
+    !p.pediatricVisualExam &&
+    !p.periodontiumType && !p.bop && !p.pocketDepthRange && !p.calculus && !p.mobility && !p.ohStatus && !p.fullChartDone
+  const occlusionEmpty =
+    !o.molarClassR && !o.molarClassL && !o.canineClassR && !o.canineClassL &&
+    !o.overjet && !o.overbite && !o.midline && (!o.crossbite || o.crossbite === 'None') && !(o.habits?.length)
+  const omitted = []
+  if (data.softTissueExamined === false) omitted.push('comprehensive soft tissue examination')
+  if (perioEmpty) omitted.push('periodontal assessment')
+  if (occlusionEmpty) omitted.push('occlusal analysis')
+  if (!omitted.length) return ''
+  return `EXAM_SCOPE: problem-focused evaluation — the following were intentionally not performed this visit: ${omitted.join(', ')}. State this scope briefly in the Objective section; do NOT treat these as documentation gaps and do NOT fabricate findings for them.`
+}
 
 export async function generateNote(rawData) {
   const data = sanitize(rawData)
@@ -645,6 +677,8 @@ export async function generateNote(rawData) {
   const postOpBlock = closingDocBlock ? '' : buildPostOpBlock(data.treatmentRendered, data.scheduledTreatment)
   const drugAllergyBlock = buildDrugAllergyBlock(detectDrugAllergyConflicts(data))
   const dentitionMismatchBlock = buildDentitionMismatchBlock(detectDentitionMismatches(data))
+  const examScopeBlock = buildExamScopeBlock(data)
+  const epsdtNarrative = isEpsdt ? buildEpsdt(data.epsdtScreening) : ''
 
   const sections = (isScheduled
     ? [
@@ -665,8 +699,9 @@ export async function generateNote(rawData) {
         drugAllergyBlock,
         dentitionMismatchBlock,
         `CHIEF COMPLAINT: ${buildCC(data.chiefComplaint || {})}`,
-        isEpsdt ? `EPSDT SCREENING: ${buildEpsdt(data.epsdtScreening)}` : '',
-        `SOFT TISSUE: ${buildSoftTissue(data.softTissue || {})}`,
+        examScopeBlock,
+        epsdtNarrative ? `EPSDT SCREENING: ${epsdtNarrative}` : '',
+        `SOFT TISSUE: ${buildSoftTissue(data.softTissue || {}, data.softTissueExamined, v.visitType)}`,
         `DENTAL FINDINGS (${data.dentitionType || 'permanent'} dentition): ${buildToothChart(data.toothChart || {})}`,
         `PERIODONTAL: ${buildPerio(data.perio || {})}`,
         `OCCLUSION: ${buildOcclusion(data.occlusion || {})}`,

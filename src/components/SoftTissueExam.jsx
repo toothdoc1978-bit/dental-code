@@ -1,9 +1,17 @@
+import { useEffect } from 'react'
 import { Section, PageTitle } from './shared.jsx'
 import { SOFT_TISSUE_AREAS } from '../data/examDefaults.js'
 
 export default function SoftTissueExam({ store }) {
   const { state, setField } = store
   const s = state.softTissue
+
+  // Rendering this step is what makes the all-WNL defaults mean "examined,
+  // normal" instead of "never looked" — the note generator keys off this flag.
+  useEffect(() => {
+    if (!state.softTissueExamined) setField('softTissueExamined', true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const allWnl = () => {
     SOFT_TISSUE_AREAS.forEach((a) => setField(`softTissue.${a.key}`, 'wnl'))

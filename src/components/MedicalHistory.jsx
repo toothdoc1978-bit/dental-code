@@ -1,5 +1,6 @@
 import { Tile, CheckChip, Section, YesNo, PageTitle } from './shared.jsx'
 import { MEDICAL_CONDITIONS, ALLERGY_OPTIONS } from '../data/examDefaults.js'
+import { filterMedicalConditions } from '../data/ageBands.js'
 
 function ChangesDetail({ value, onChange }) {
   return (
@@ -58,7 +59,7 @@ export default function MedicalHistory({ store }) {
 
       <Section title="Conditions" hint="Check all that apply">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {MEDICAL_CONDITIONS.map((c) => (
+          {filterMedicalConditions(MEDICAL_CONDITIONS, state.visitSetup.age).map((c) => (
             <CheckChip key={c} active={m.conditions.includes(c)} onClick={() => toggleItem('medicalHistory.conditions', c)}>
               {c}
             </CheckChip>

@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { CDT_BY_CATEGORY, CDT_CATEGORIES, EPSDT_FAVORITES, lookupCdt } from '../data/cdtCodes.js'
+import { filterCdtCodes } from '../data/ageBands.js'
 
-export default function CdtPicker({ patientType, selected, onChange, withPriority = false }) {
+export default function CdtPicker({ patientType, age, selected, onChange, withPriority = false }) {
   const isEpsdt = patientType === 'epsdt'
   const tabs = isEpsdt ? ['Favorites', ...CDT_CATEGORIES] : CDT_CATEGORIES
   const [tab, setTab] = useState(tabs[0])
   const [search, setSearch] = useState('')
 
-  const sourceList =
+  const sourceList = filterCdtCodes(
     tab === 'Favorites'
       ? EPSDT_FAVORITES
-      : (CDT_BY_CATEGORY[tab] || []).map((c) => ({ ...c, category: tab }))
+      : (CDT_BY_CATEGORY[tab] || []).map((c) => ({ ...c, category: tab })),
+    age
+  )
 
   const filtered = search
     ? sourceList.filter(

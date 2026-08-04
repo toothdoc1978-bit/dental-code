@@ -85,10 +85,14 @@ export const RUBRIC = [
     name: 'soap_structure',
     why: 'Notes default to S/O/A/P labels unless the encounter is too sparse (extenuating collapse allowed).',
     applies: () => true,
-    evaluate: (note) => {
+    evaluate: (note, c) => {
       const labels = ['S:', 'O:', 'A:', 'P:'].filter((l) => new RegExp(`^\\s*${l}`, 'm').test(note))
       if (labels.length >= 3) return { status: 'pass', detail: `${labels.length}/4 SOAP labels` }
-      if (wordCount(note) < 130) return { status: 'pass', detail: 'short note — collapse permitted' }
+      // Limited/emergency notes are budgeted at 120-250 words, so a legitimate
+      // minimal note sits near the generic 130-word collapse line — give
+      // focused visits more collapse headroom.
+      const collapseLimit = ['limited', 'emergency'].includes(c?.visitSetup?.visitType) ? 160 : 130
+      if (wordCount(note) < collapseLimit) return { status: 'pass', detail: 'short note — collapse permitted' }
       return { status: 'fail', detail: `only ${labels.length}/4 SOAP labels in a full-length note` }
     }
   },
@@ -269,6 +273,18 @@ export const RUBRIC = [
       if (!visual) return { status: 'fail', detail: 'missing visual / deferred-probing language' }
       if (fabricated) return { status: 'fail', detail: 'fabricated pocket/BOP numbers in a visual-only exam' }
       return { status: 'pass', detail: 'visual exam, no fabricated probing values' }
+    }
+  },
+  {
+    name: 'soft_tissue_scope',
+    why: 'A skipped soft-tissue exam must never be reported as a completed negative ("WNL in all areas") exam.',
+    applies: (c) => c.softTissueExamined === false && ['limited', 'emergency'].includes(c.visitSetup?.visitType),
+    evaluate: (note) => {
+      if (m(note, /soft tissue[^.]{0,80}(within normal limits|WNL)/i))
+        return { status: 'fail', detail: 'claims a normal soft-tissue exam that was never performed' }
+      if (m(note, /(not performed|limited to|problem-focused|focused (exam|evaluation)|deferred)/i))
+        return { status: 'pass', detail: 'scope honestly limited' }
+      return { status: 'warn', detail: 'no soft-tissue claim, but scope not stated either' }
     }
   },
   {

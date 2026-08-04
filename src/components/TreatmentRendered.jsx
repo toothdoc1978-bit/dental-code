@@ -8,6 +8,7 @@ export default function TreatmentRendered({ store }) {
       <PageTitle title="Treatment Rendered" subtitle="CDT codes performed today" />
       <CdtPicker
         patientType={state.visitSetup.patientType}
+        age={state.visitSetup.age}
         selected={state.treatmentRendered}
         onChange={(v) => setField('treatmentRendered', v)}
       />
