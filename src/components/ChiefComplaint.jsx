@@ -1,9 +1,18 @@
 import { Tile, CheckChip, Section, PageTitle } from './shared.jsx'
 import { CC_TYPES, PAIN_CHARACTER } from '../data/examDefaults.js'
+import { isFocusedVisit } from '../data/ageBands.js'
+
+const EXTRA_SECTION_OPTIONS = [
+  { key: 'soft', label: 'Soft Tissue Exam' },
+  { key: 'perio', label: 'Perio Assessment' },
+  { key: 'occ', label: 'Occlusion Exam' }
+]
 
 export default function ChiefComplaint({ store }) {
   const { state, setField, toggleItem } = store
   const c = state.chiefComplaint
+  const focused = isFocusedVisit(state.visitSetup.visitType)
+  const extras = state.visitSetup.extraSections || []
 
   return (
     <div>
@@ -72,6 +81,21 @@ export default function ChiefComplaint({ store }) {
             </div>
           </Section>
         </>
+      )}
+
+      {focused && (
+        <Section
+          title="Add exam sections for this visit"
+          hint="Problem-focused visits skip these by default. Add any you actually performed today."
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {EXTRA_SECTION_OPTIONS.map((s) => (
+              <CheckChip key={s.key} active={extras.includes(s.key)} onClick={() => toggleItem('visitSetup.extraSections', s.key)}>
+                {s.label}
+              </CheckChip>
+            ))}
+          </div>
+        </Section>
       )}
     </div>
   )

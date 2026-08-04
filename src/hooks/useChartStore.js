@@ -41,7 +41,8 @@ export const initialState = {
     visitType: null,
     visitDate: new Date().toISOString().slice(0, 10),
     provider: null,
-    age: null
+    age: null,
+    extraSections: []
   },
   scheduledTreatment: {
     procedures: []
@@ -118,6 +119,11 @@ export const initialState = {
   patientEducation: [],
   signedConsents: [],
   epsdtDefaultsApplied: false,
+  // false = soft-tissue exam never performed this visit. Distinct from the
+  // all-'wnl' softTissue defaults, which only mean "no abnormal findings
+  // entered" — the note generator must never claim a full negative exam
+  // unless the step was actually opened.
+  softTissueExamined: false,
   generatedNote: '',
   currentStep: 0
 }
@@ -138,10 +144,32 @@ function getPath(obj, path) {
   return path.split('.').reduce((o, k) => (o == null ? o : o[k]), obj)
 }
 
+// EPSDT defaults must seed from the reducer, not a step-component mount:
+// focused (limited/emergency) visits never render the EPSDT step, so a
+// mount-based seed would silently skip. Pediatric perio seeding stays
+// mount-based on purpose — it asserts a visual exam, which is only true
+// when the Perio step actually renders.
+function maybeSeedVisitDefaults(state) {
+  const { patientType, visitType } = state.visitSetup
+  if (state.epsdtDefaultsApplied) return state
+  if (patientType !== 'epsdt' || !['comprehensive', 'periodic'].includes(visitType)) return state
+  return {
+    ...state,
+    epsdtDefaultsApplied: true,
+    epsdtScreening: {
+      ...state.epsdtScreening,
+      counselingTopics: union(state.epsdtScreening.counselingTopics, EPSDT_DEFAULT_COUNSELING)
+    },
+    patientEducation: union(state.patientEducation, EPSDT_DEFAULT_EDUCATION)
+  }
+}
+
 function reducer(state, action) {
   switch (action.type) {
-    case 'SET_FIELD':
-      return setPath(state, action.path, action.value)
+    case 'SET_FIELD': {
+      const next = setPath(state, action.path, action.value)
+      return action.path.startsWith('visitSetup.') ? maybeSeedVisitDefaults(next) : next
+    }
     case 'TOGGLE_ARRAY_ITEM': {
       const arr = getPath(state, action.path) || []
       const next = arr.includes(action.item)
@@ -177,9 +205,9 @@ function reducer(state, action) {
     case 'RESET_FORM':
       return { ...initialState, visitSetup: { ...initialState.visitSetup, visitDate: new Date().toISOString().slice(0, 10) } }
     case 'APPLY_FRAGMENT':
-      return mergeFragment(state, action.fragment)
+      return maybeSeedVisitDefaults(mergeFragment(state, action.fragment))
     case 'HYDRATE':
-      return action.state
+      return maybeSeedVisitDefaults(action.state)
     default:
       return state
   }
@@ -203,6 +231,16 @@ export function useChartStore() {
             if (p.appointmentType === 'Seat') return { ...p, appointmentType: 'Seat (lab case delivery)' }
             return p
           })
+        }
+        if (parsed.visitSetup && !Array.isArray(parsed.visitSetup.extraSections)) {
+          parsed.visitSetup.extraSections = []
+        }
+        if (!('softTissueExamined' in parsed)) {
+          // Pre-flag charts: full-exam visits walked the soft-tissue step by
+          // definition; otherwise only count an exam if a finding was entered.
+          parsed.softTissueExamined =
+            ['comprehensive', 'periodic'].includes(parsed.visitSetup?.visitType) ||
+            Object.values(parsed.softTissue || {}).some((v) => v !== 'wnl')
         }
         dispatch({ type: 'HYDRATE', state: { ...initialState, ...parsed } })
       }

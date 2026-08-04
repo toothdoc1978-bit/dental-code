@@ -689,6 +689,17 @@ export const EDUCATION_TOPICS = [
   'Early childhood caries prevention'
 ]
 
+// Trimmed education list for limited/emergency (problem-focused) visits.
+export const EDUCATION_TOPICS_FOCUSED = [
+  'Post-operative care instructions',
+  'Analgesic guidance (OTC dosing reviewed)',
+  'Antibiotic compliance (if prescribed)',
+  'Swelling management / cold compress',
+  'Soft diet until definitive treatment',
+  'Importance of definitive follow-up treatment',
+  'When to seek urgent care'
+]
+
 export const DIAGNOSIS_QUICK_PICKS = [
   'Dental caries - primary dentition',
   'Dental caries - permanent dentition',

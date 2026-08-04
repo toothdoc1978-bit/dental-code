@@ -691,9 +691,8 @@ export const SEED_CASES = [
           "lingers"
         ]
       },
-      "softTissue": {
-        "lips": "wnl"
-      },
+      "softTissue": {},
+      "softTissueExamined": false,
       "toothChart": {
         "3": {
           "conditions": [
@@ -952,9 +951,8 @@ export const SEED_CASES = [
           "Provoked by chewing"
         ]
       },
-      "softTissue": {
-        "lips": "wnl"
-      },
+      "softTissue": {},
+      "softTissueExamined": false,
       "toothChart": {
         "30": {
           "conditions": [

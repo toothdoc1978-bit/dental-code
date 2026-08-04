@@ -8,6 +8,7 @@ export default function TreatmentPlan({ store }) {
       <PageTitle title="Treatment Plan" subtitle="Recommended future treatment" />
       <CdtPicker
         patientType={state.visitSetup.patientType}
+        age={state.visitSetup.age}
         selected={state.treatmentPlan}
         onChange={(v) => setField('treatmentPlan', v)}
         withPriority

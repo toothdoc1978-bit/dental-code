@@ -18,7 +18,8 @@ export const ALLOWED_TOP_LEVEL = [
   'treatmentPlan',
   'patientEducation',
   'scheduledTreatment',
-  'signedConsents'
+  'signedConsents',
+  'softTissueExamined'
 ]
 
 const ALLOWED_VISIT_SETUP = ['patientType', 'visitType', 'visitDate', 'provider', 'age']
@@ -63,6 +64,7 @@ medicalHistory: { changesSinceLastVisit: true|false, changesDetail?: string (onl
 chiefComplaint: { type: "recall"|"pain"|"followup"|"emergency"|"cosmetic"|"other", location?: string, duration?: string, severity?: 0-10, character?: string[] }
 epsdtScreening (only when patientType "epsdt"): { developmentWNL: true|false, waterSource?: string, supplementalFluoride?: string[], cariesRisk: "low"|"moderate"|"high", riskFactors?: string[], counselingTopics?: string[], referralsNeeded?: string[] }
 softTissue: { lips, buccalMucosa, hardPalate, softPalate, tongue, floorOfMouth, gingiva, oropharynx, lymphNodes, tmj } each "wnl" or a short finding string
+softTissueExamined: bool (false = soft-tissue exam intentionally not performed; use false with an empty softTissue object for limited/emergency charts that skip it)
 toothChart: { "<toothNumber>": { conditions: string[], surfaces?: string[] } }
 dentitionType: "permanent"|"primary"|"mixed"
 perio: { periodontiumType?: string, bop?: string, pocketDepthRange?: string, furcation?: string, calculus?: string, mobility?: string, ohStatus?: "Good"|"Fair"|"Poor", fullChartDone?: bool, pediatricVisualExam?: bool (true for under-12 visual-only assessment) }

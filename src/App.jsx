@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useChartStore } from './hooks/useChartStore.js'
+import { isFocusedVisit } from './data/ageBands.js'
 import VisitSetup from './components/VisitSetup.jsx'
 import MedicalHistory from './components/MedicalHistory.jsx'
 import ChiefComplaint from './components/ChiefComplaint.jsx'
@@ -18,7 +19,36 @@ import ScheduledTreatment from './components/ScheduledTreatment.jsx'
 import Consents from './components/Consents.jsx'
 import Audit, { computeAuditScore } from './components/Audit.jsx'
 
-function getSteps(patientType, visitType) {
+// Canonical full-exam order. Focused (limited/emergency) visits filter this
+// list down; the escape-hatch chips on the Chief Complaint page can add
+// 'soft'/'perio'/'occ' back via visitSetup.extraSections.
+//
+// Index-stability invariant: the extraSections chips render ONLY on the CC
+// page (index 2), and every togglable step sits at canonical index >= 3.
+// Toggling can therefore never shift the step the user is standing on. Keep
+// the chips on CC (or earlier) if they ever move.
+const FULL_EXAM_STEPS = [
+  { key: 'setup', label: 'Setup', Component: VisitSetup },
+  { key: 'medHx', label: 'Med Hx', Component: MedicalHistory },
+  { key: 'cc', label: 'CC', Component: ChiefComplaint },
+  { key: 'epsdt', label: 'EPSDT', Component: EpsdtScreening },
+  { key: 'soft', label: 'Soft Tissue', Component: SoftTissueExam },
+  { key: 'teeth', label: 'Teeth', Component: ToothChart },
+  { key: 'perio', label: 'Perio', Component: PerioAssessment },
+  { key: 'occ', label: 'Occlusion', Component: OcclusionExam },
+  { key: 'xray', label: 'X-ray', Component: Radiographs },
+  { key: 'tx', label: 'Tx Done', Component: TreatmentRendered },
+  { key: 'dx', label: 'Dx', Component: Diagnoses },
+  { key: 'plan', label: 'Tx Plan', Component: TreatmentPlan },
+  { key: 'edu', label: 'Education', Component: PatientEducation },
+  { key: 'consents', label: 'Consents', Component: Consents },
+  { key: 'audit', label: 'Audit', Component: Audit },
+  { key: 'note', label: 'Note', Component: NoteOutput }
+]
+
+const FOCUSED_HIDDEN_KEYS = ['soft', 'perio', 'occ']
+
+function getSteps(patientType, visitType, extraSections) {
   if (visitType === 'scheduled') {
     return [
       { key: 'setup', label: 'Setup', Component: VisitSetup },
@@ -29,27 +59,13 @@ function getSteps(patientType, visitType) {
       { key: 'note', label: 'Note', Component: NoteOutput }
     ]
   }
-  const base = [
-    { key: 'setup', label: 'Setup', Component: VisitSetup },
-    { key: 'medHx', label: 'Med Hx', Component: MedicalHistory },
-    { key: 'cc', label: 'CC', Component: ChiefComplaint }
-  ]
-  const epsdt = patientType === 'epsdt' ? [{ key: 'epsdt', label: 'EPSDT', Component: EpsdtScreening }] : []
-  const rest = [
-    { key: 'soft', label: 'Soft Tissue', Component: SoftTissueExam },
-    { key: 'teeth', label: 'Teeth', Component: ToothChart },
-    { key: 'perio', label: 'Perio', Component: PerioAssessment },
-    { key: 'occ', label: 'Occlusion', Component: OcclusionExam },
-    { key: 'xray', label: 'X-ray', Component: Radiographs },
-    { key: 'tx', label: 'Tx Done', Component: TreatmentRendered },
-    { key: 'dx', label: 'Dx', Component: Diagnoses },
-    { key: 'plan', label: 'Tx Plan', Component: TreatmentPlan },
-    { key: 'edu', label: 'Education', Component: PatientEducation },
-    { key: 'consents', label: 'Consents', Component: Consents },
-    { key: 'audit', label: 'Audit', Component: Audit },
-    { key: 'note', label: 'Note', Component: NoteOutput }
-  ]
-  return [...base, ...epsdt, ...rest]
+  const focused = isFocusedVisit(visitType)
+  const extras = extraSections || []
+  return FULL_EXAM_STEPS.filter(({ key }) => {
+    if (key === 'epsdt') return patientType === 'epsdt' && !focused
+    if (FOCUSED_HIDDEN_KEYS.includes(key)) return !focused || extras.includes(key)
+    return true
+  })
 }
 
 export default function App() {
@@ -57,8 +73,8 @@ export default function App() {
   const { state, setStep, resetForm } = store
 
   const steps = useMemo(
-    () => getSteps(state.visitSetup.patientType, state.visitSetup.visitType),
-    [state.visitSetup.patientType, state.visitSetup.visitType]
+    () => getSteps(state.visitSetup.patientType, state.visitSetup.visitType, state.visitSetup.extraSections),
+    [state.visitSetup.patientType, state.visitSetup.visitType, state.visitSetup.extraSections]
   )
   const auditScore = useMemo(() => computeAuditScore(state), [state])
   const safeStep = Math.min(state.currentStep, steps.length - 1)

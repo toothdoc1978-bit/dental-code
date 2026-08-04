@@ -164,13 +164,15 @@ function runChecks(state) {
     })
   }
 
-  // EPSDT specifics
-  if (state.visitSetup.patientType === 'epsdt') {
+  // EPSDT specifics — screening (and its caries-risk requirement) belongs to
+  // periodicity-schedule exam visits, not problem-focused limited/emergency
+  // encounters where the EPSDT step is skipped.
+  if (state.visitSetup.patientType === 'epsdt' && ['comprehensive', 'periodic'].includes(state.visitSetup.visitType)) {
     const e = state.epsdtScreening || {}
     checks.push({
       label: 'EPSDT caries risk level documented',
       status: e.cariesRisk ? 'pass' : 'fail',
-      detail: !e.cariesRisk ? 'MCNA Louisiana Medicaid requires explicit caries risk on every EPSDT visit.' : ''
+      detail: !e.cariesRisk ? 'MCNA Louisiana Medicaid requires explicit caries risk on every EPSDT exam visit.' : ''
     })
   }
 
