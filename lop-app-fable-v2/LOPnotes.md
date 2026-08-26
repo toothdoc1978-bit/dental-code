@@ -145,3 +145,16 @@ permanently rejected (not retried).
   club's insurer) before building, not something to bolt on casually.
 - Ideas discussed but not built: list↔map two-way *scroll* sync, editable
   "move a pin" admin tool (pins are read-only client-side as of v2.x).
+- Evaluated and NOT adopted (Jul 2026): github.com/ssoad/tn_checkin —
+  geofenced check-in demo (same Flutter/Firebase/Riverpod/Geolocator stack).
+  Nothing to import: its mechanisms are already in this app or are one-liners
+  of the same plugin, and it lacks our offline handling and rules validation.
+  Its headline features don't transfer to LOP: (a) auto-checkout on leaving a
+  radius is a FOREGROUND position stream — dead on backgrounded iPhone
+  Safari; only viable in the future native app with background location
+  (parked there, next to push notifications); (b) "must be physically at the
+  point to check in" needs georeferenced stand lat/lngs (our pins are photo
+  fractions) AND conflicts with the club's actual flow — members check in at
+  the morning draw from camp, so arrival-at-stand can't gate check-in (which
+  also rules out crowdsourcing stand coords from check-in GPS: it would map
+  the camp).
