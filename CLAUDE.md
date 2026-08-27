@@ -7,7 +7,7 @@ them. The real QA commands are:
 
 - **Build check:** `npm run build`
 - **Clinical logic evals (local, no API key needed):**
-  `npm run eval:coding && npm run eval:conflicts && npm run eval:dentition`
+  `npm run eval:coding && npm run eval:conflicts && npm run eval:dentition && npm run eval:coherence`
 - **Note-quality regression (requires `ANTHROPIC_API_KEY` in `.env`, or point
   `EVAL_URL` at a deployed instance):** `npm run eval:seed`
 

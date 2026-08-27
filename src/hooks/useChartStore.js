@@ -125,6 +125,7 @@ export const initialState = {
   // unless the step was actually opened.
   softTissueExamined: false,
   generatedNote: '',
+  patientSummary: '',
   currentStep: 0
 }
 
@@ -202,6 +203,8 @@ function reducer(state, action) {
       return { ...state, currentStep: action.step }
     case 'SET_GENERATED_NOTE':
       return { ...state, generatedNote: action.note }
+    case 'SET_PATIENT_SUMMARY':
+      return { ...state, patientSummary: action.summary }
     case 'RESET_FORM':
       return { ...initialState, visitSetup: { ...initialState.visitSetup, visitDate: new Date().toISOString().slice(0, 10) } }
     case 'APPLY_FRAGMENT':
@@ -259,6 +262,7 @@ export function useChartStore() {
   const seedPediatricPerio = useCallback(() => dispatch({ type: 'SEED_PEDIATRIC_PERIO' }), [])
   const setStep = useCallback((step) => dispatch({ type: 'SET_STEP', step }), [])
   const setGeneratedNote = useCallback((note) => dispatch({ type: 'SET_GENERATED_NOTE', note }), [])
+  const setPatientSummary = useCallback((summary) => dispatch({ type: 'SET_PATIENT_SUMMARY', summary }), [])
   const resetForm = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
     dispatch({ type: 'RESET_FORM' })
@@ -270,5 +274,5 @@ export function useChartStore() {
     return { ok: true, mergedKeys: Object.keys(fragment) }
   }, [])
 
-  return { state, setField, toggleItem, seedEpsdtDefaults, seedPediatricPerio, setStep, setGeneratedNote, resetForm, applyFragment }
+  return { state, setField, toggleItem, seedEpsdtDefaults, seedPediatricPerio, setStep, setGeneratedNote, setPatientSummary, resetForm, applyFragment }
 }
