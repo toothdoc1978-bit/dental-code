@@ -221,6 +221,37 @@ export function detectDentitionMismatches(data) {
   return flags
 }
 
+// Condition pairs that cannot (error) or usually should not (warn) coexist on
+// one tooth. 'Missing' vs everything is the classic charting slip; the rest
+// follow from what an implant, full-coverage crown, or unerupted tooth can
+// physically carry. Unknown condition strings are ignored — only listed pairs
+// ever flag, so custom future conditions stay silent.
+const TOOTH_CONDITION_CONFLICTS = [
+  { a: 'Missing', b: null, severity: 'error', reason: 'findings charted on a tooth marked Missing' },
+  { a: 'Implant', b: ['Caries', 'Root canal treated', 'Existing amalgam', 'Existing composite', 'Sealant present'], severity: 'error', reason: 'an implant has no natural tooth structure for this finding' },
+  { a: 'Crown', b: ['Existing amalgam', 'Existing composite', 'Sealant present'], severity: 'warn', reason: 'a full-coverage crown makes separate surface restorations unchartable' },
+  { a: 'Unerupted/partially erupted', b: ['Existing amalgam', 'Existing composite', 'Crown', 'Root canal treated'], severity: 'warn', reason: 'unerupted teeth are not restored' }
+]
+
+// Returns an array of internal tooth-chart contradictions:
+// { tooth, pair: [condA, condB], reason, severity: 'error'|'warn' }.
+export function detectToothConditionConflicts(toothChart) {
+  const flags = []
+  for (const [tooth, v] of Object.entries(toothChart || {})) {
+    const conditions = v?.conditions || []
+    if (conditions.length < 2) continue
+    for (const rule of TOOTH_CONDITION_CONFLICTS) {
+      if (!conditions.includes(rule.a)) continue
+      const others = rule.b === null
+        ? conditions.filter((c) => c !== rule.a)
+        : conditions.filter((c) => rule.b.includes(c))
+      for (const other of others) {
+        flags.push({ tooth, pair: [rule.a, other], reason: rule.reason, severity: rule.severity })
+      }
+    }
+  }
+  return flags
+}
 
 export const CC_TYPES = [
   { value: 'recall', label: 'Routine Recall/Preventive' },

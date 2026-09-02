@@ -6,7 +6,8 @@ import {
   validateTreatmentCoding,
   diagnosisIcdMismatch,
   detectCdtConflicts,
-  categoryDocReminders
+  categoryDocReminders,
+  detectToothConditionConflicts
 } from '../data/examDefaults.js'
 
 // Each check returns {status: 'pass'|'fail'|'warn', label, detail?}.
@@ -129,6 +130,20 @@ function runChecks(state) {
         detail: reminders.map((rem) => rem.message).join(' • ')
       })
     }
+  }
+
+  // Tooth-chart internal coherence (Missing + findings, implant restorations, etc.)
+  const toothConflicts = detectToothConditionConflicts(state.toothChart)
+  if (Object.keys(state.toothChart || {}).length) {
+    const errors = toothConflicts.filter((c) => c.severity === 'error')
+    const warns = toothConflicts.filter((c) => c.severity === 'warn')
+    checks.push({
+      label: 'Tooth chart internally consistent',
+      status: errors.length ? 'fail' : warns.length ? 'warn' : 'pass',
+      detail: toothConflicts.length
+        ? toothConflicts.map((c) => `#${c.tooth}: ${c.pair.join(' + ')} — ${c.reason}`).join(' • ')
+        : ''
+    })
   }
 
   // Radiograph ALARA rationale

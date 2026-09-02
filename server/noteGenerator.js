@@ -5,6 +5,7 @@ import {
   detectDrugAllergyConflicts,
   detectDentitionMismatches
 } from '../src/data/examDefaults.js'
+import { JARGON_SUBSTITUTIONS, FORBIDDEN_ABBREVIATIONS } from '../src/data/plainLanguage.js'
 
 const client = new Anthropic()
 
@@ -739,4 +740,50 @@ export async function generateNote(rawData) {
     .trim()
 
   return text
+}
+
+const PATIENT_SUMMARY_SYSTEM_PROMPT = `You write short after-visit summaries that a dental office hands to the patient or their parent/guardian. You are NOT writing a clinical chart note.
+
+RULES:
+1. Audience: the patient or their caregiver. Address them directly as "you" (or "your child" when the visit data says the patient is a child). NEVER use a name or any placeholder like [PATIENT].
+2. Reading level: 6th grade. Short sentences. Everyday words. Warm but factual tone.
+3. FORBIDDEN in the output: any CDT code (D followed by four digits); these abbreviations: ${FORBIDDEN_ABBREVIATIONS.join(', ')}; and these clinical terms — use the plain replacement instead:
+${Object.entries(JARGON_SUBSTITUTIONS).map(([k, v]) => `   - "${k}" → say "${v}"`).join('\n')}
+4. Only describe what the visit data documents. If a section has no data, say nothing about it — do NOT write "N/A", "not discussed", or invented reassurance. Leaving something out is correct; filling a gap is fabrication.
+5. Never state or speculate about diagnoses beyond what is documented, never promise outcomes, and never give drug dosing beyond what the education topics state.
+6. Structure (plain paragraphs or short bullet lines, no headings required): what we looked at / found today → what we did today → what we recommend next → how to care for your teeth at home (only if education topics are documented).
+7. Length: 120-200 words.
+8. Output ONLY the summary text — no preamble, no markdown headers.`
+
+export async function generatePatientSummary(rawData) {
+  const data = sanitize(rawData)
+  const v = data.visitSetup || {}
+
+  const facts = [
+    `VISIT: ${buildVisitNarrative(v)}`,
+    v.visitType !== 'scheduled' ? `REASON FOR VISIT: ${buildCC(data.chiefComplaint || {})}` : '',
+    `TOOTH FINDINGS: ${buildToothChart(data.toothChart || {})}`,
+    `TREATMENT DONE TODAY: ${buildTreatment(data.treatmentRendered)}`,
+    data.scheduledTreatment?.procedures?.length ? `PROCEDURES PERFORMED:\n${buildProcedures(data.scheduledTreatment)}` : '',
+    `RECOMMENDED NEXT: ${buildPlan(data.treatmentPlan)}`,
+    `HOME-CARE TOPICS DISCUSSED: ${data.patientEducation?.join(', ') || 'None documented'}`
+  ].filter(Boolean)
+
+  const userPrompt = `Write the after-visit summary from this visit data. Respond with ONLY the summary text.\n\n${facts.join('\n')}`
+
+  const response = await createWithRetry({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1024,
+    temperature: 1,
+    // Byte-identical system prompt on every call — cacheable, same pattern as
+    // the chart-note prompt above.
+    system: [{ type: 'text', text: PATIENT_SUMMARY_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+    messages: [{ role: 'user', content: userPrompt }]
+  })
+
+  return response.content
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('\n')
+    .trim()
 }

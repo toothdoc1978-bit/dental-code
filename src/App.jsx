@@ -96,7 +96,10 @@ export default function App() {
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-bold text-clinical-700">Dental Charting Companion</h1>
-            <p className="text-xs text-slate-500">Louisiana EPSDT / MCNA + General — No PHI stored</p>
+            <p className="text-xs text-slate-500">
+              Louisiana EPSDT / MCNA + General — No PHI stored
+              <span className="ml-2 font-mono text-slate-400" title="Build identity">v{__APP_VERSION__} · {__BUILD_SHA__}</span>
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <span

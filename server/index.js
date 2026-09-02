@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import { generateNote } from './noteGenerator.js'
 import { findPhiKey } from './phiGuard.js'
 import intakeFetchHandler from '../api/intake-fetch.js'
+import patientSummaryHandler from '../api/patient-summary.js'
 
 dotenv.config()
 
@@ -18,6 +19,7 @@ app.get('/api/health', (req, res) => {
 })
 
 app.all('/api/intake-fetch', (req, res) => intakeFetchHandler(req, res))
+app.all('/api/patient-summary', (req, res) => patientSummaryHandler(req, res))
 
 app.post('/api/generate-note', async (req, res) => {
   try {
