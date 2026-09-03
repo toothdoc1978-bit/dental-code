@@ -46,6 +46,16 @@ Open http://localhost:5173 in a browser tab next to Dentrix.
 > works without any local setup. You only need a local `.env` to run the app or
 > the eval harness on your own machine.
 
+## Deploying
+
+The Vercel project `dental-code` is not git-linked, so merging to `main` does
+not deploy anything. Production is deployed with the two-file bootstrap in
+[`deploy/vercel-bootstrap/`](deploy/vercel-bootstrap/README.md), which clones
+`main` at build time and works from the hosted assistant's Vercel connector
+with no token. Read the `bootstrapStamp` rule there before redeploying: an
+unchanged upload is deduplicated and keeps the old build live. The root
+`deploy.mjs` is the token-based alternative.
+
 ## Eval Harness
 
 A scored, regression-safe loop for improving note quality (details in

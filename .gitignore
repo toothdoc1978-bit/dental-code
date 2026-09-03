@@ -8,3 +8,7 @@ dist
 evals/report.json
 evals/report.md
 evals/generated/*.json
+
+# Vercel bootstrap deploy (deploy/vercel-bootstrap/README.md): build-time clone + Build Output tree
+deploy/vercel-bootstrap/app/
+deploy/vercel-bootstrap/.vercel/
