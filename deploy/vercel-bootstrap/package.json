@@ -1,0 +1,9 @@
+{
+  "name": "dental-code",
+  "private": true,
+  "type": "module",
+  "bootstrapStamp": "REPLACE-ON-EVERY-UPLOAD",
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}
