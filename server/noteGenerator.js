@@ -363,6 +363,7 @@ function buildPerio(p) {
   if (p.furcation && p.furcation !== 'None') parts.push(`Furcation: ${p.furcation}`)
   if (p.calculus) parts.push(`Calculus: ${p.calculus}`)
   if (p.mobility) parts.push(`Mobility: ${p.mobility}`)
+  if (p.prognosis) parts.push(`Overall periodontal prognosis: ${p.prognosis}`)
   if (p.ohStatus) parts.push(`Oral hygiene: ${p.ohStatus}`)
   if (p.fullChartDone) parts.push('Full periodontal chart completed and documented separately')
   return parts.join('; ') || 'Periodontal assessment not documented'
