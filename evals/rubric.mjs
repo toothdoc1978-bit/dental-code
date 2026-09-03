@@ -276,6 +276,18 @@ export const RUBRIC = [
     }
   },
   {
+    name: 'perio_prognosis',
+    why: 'A charted overall periodontal prognosis must be stated in the note.',
+    applies: (c) => !!c.perio?.prognosis && !c.perio?.pediatricVisualExam,
+    evaluate: (note, c) => {
+      const v = String(c.perio.prognosis).toLowerCase()
+      const near = new RegExp(`prognosis[^.]{0,60}\\b${v}\\b|\\b${v}\\b[^.]{0,60}prognosis`, 'i')
+      return m(note, near)
+        ? { status: 'pass', detail: `prognosis stated as ${c.perio.prognosis}` }
+        : { status: 'fail', detail: 'charted prognosis not stated' }
+    }
+  },
+  {
     name: 'soft_tissue_scope',
     why: 'A skipped soft-tissue exam must never be reported as a completed negative ("WNL in all areas") exam.',
     applies: (c) => c.softTissueExamined === false && ['limited', 'emergency'].includes(c.visitSetup?.visitType),

@@ -628,6 +628,7 @@ export const SEED_CASES = [
       "perio": {
         "periodontiumType": "Periodontitis Stage III",
         "bop": "Localized (<30%)",
+        "prognosis": "Fair",
         "pocketDepthRange": "4–5 mm",
         "calculus": "Subgingival present",
         "ohStatus": "Fair",

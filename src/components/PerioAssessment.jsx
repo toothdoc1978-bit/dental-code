@@ -95,6 +95,10 @@ export default function PerioAssessment({ store }) {
         {radioGroup('perio.ohStatus', p.ohStatus, ['Good', 'Fair', 'Poor'])}
       </Section>
 
+      <Section title="Overall Prognosis">
+        {radioGroup('perio.prognosis', p.prognosis, ['Good', 'Fair', 'Poor', 'Hopeless'])}
+      </Section>
+
       <Section title="Full perio chart completed separately?">
         <CheckChip active={p.fullChartDone} onClick={() => setField('perio.fullChartDone', !p.fullChartDone)}>
           Yes - documented in separate periodontal chart

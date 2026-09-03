@@ -93,6 +93,7 @@ export const initialState = {
     calculus: null,
     mobility: null,
     ohStatus: null,
+    prognosis: null,
     fullChartDone: false,
     pediatricVisualExam: false
   },

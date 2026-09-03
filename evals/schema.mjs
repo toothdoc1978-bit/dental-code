@@ -67,7 +67,7 @@ softTissue: { lips, buccalMucosa, hardPalate, softPalate, tongue, floorOfMouth, 
 softTissueExamined: bool (false = soft-tissue exam intentionally not performed; use false with an empty softTissue object for limited/emergency charts that skip it)
 toothChart: { "<toothNumber>": { conditions: string[], surfaces?: string[] } }
 dentitionType: "permanent"|"primary"|"mixed"
-perio: { periodontiumType?: string, bop?: string, pocketDepthRange?: string, furcation?: string, calculus?: string, mobility?: string, ohStatus?: "Good"|"Fair"|"Poor", fullChartDone?: bool, pediatricVisualExam?: bool (true for under-12 visual-only assessment) }
+perio: { periodontiumType?: string, bop?: string, pocketDepthRange?: string, furcation?: string, calculus?: string, mobility?: string, ohStatus?: "Good"|"Fair"|"Poor", prognosis?: "Good"|"Fair"|"Poor"|"Hopeless" (overall, full-probing exams only), fullChartDone?: bool, pediatricVisualExam?: bool (true for under-12 visual-only assessment) }
 occlusion: { molarClassR, molarClassL, canineClassR, canineClassL, overjet, overbite, midline, crossbite, habits? }
 radiographs: { none: bool, taken: [{ type: string, reason: string, panoIndications?: string[] (include "alara-retake" to trigger the ALARA catch-all), alaraCatchAllReason?: string }], findings?: string[], additionalNotes?: string }
 treatmentRendered: [{ cdtCode: string (e.g. "D2392","D2740","D3330","D7140","D0150"), description: string, teeth?: string[], surfaces?: string[] }]
